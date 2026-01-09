@@ -1,0 +1,33 @@
+# FastAPI Base 依赖包
+# 只保留核心必需依赖
+
+# Web 框架
+fastapi==0.115.0
+uvicorn==0.20.0
+
+# 数据库
+sqlalchemy==2.0.41
+pymysql==1.1.1
+pytz==2025.2
+
+# 缓存
+redis==6.2.0
+
+# 配置管理
+python-dotenv==1.1.1
+pydantic>=2.11.5
+pydantic-settings==2.6.1
+toml==0.10.2
+
+# HTTP 请求
+requests==2.32.4
+
+# 文件上传
+python-multipart==0.0.20
+
+# 加密（用于JWT）
+cryptography==45.0.6
+
+# 其他工具
+asgiref==3.8.1
+nest-asyncio==1.6.0

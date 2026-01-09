@@ -1,0 +1,19 @@
+# 腾讯云镜像配置示例
+# 复制此文件为 tencent.mk 并填入真实的账号信息
+DOCKER_USER='your_tencent_docker_user'
+DOCKER_PWD='your_tencent_docker_password'
+DOCKER_REP='ccr.ccs.tencentyun.com'
+DOCKER_NAMESPACE='your_namespace'
+NEW_IMAGE_NAME='your-image-name'
+
+.PHONY: image.push.tencent
+image.push.tencent: image
+	@echo ${DOCKER_PWD} | docker login -u ${DOCKER_USER} ${DOCKER_REP} --password-stdin
+	@docker tag ${DOCKER_NAME}:${_TAG} ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:${_TAG}
+	@docker push ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:${_TAG}
+	@docker tag ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:${_TAG} ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:latest
+	@docker push ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:latest
+
+.PHONY: image.save
+image.save:
+	@docker save -o ${NEW_IMAGE_NAME}-latest.tar ${DOCKER_REP}/${DOCKER_NAMESPACE}/${NEW_IMAGE_NAME}:latest  
