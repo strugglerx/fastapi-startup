@@ -2,11 +2,12 @@ English | [中文简体](./README_ZH.md)
 
 # FastAPI Base Scaffold
 
-A concise, easy-to-use, production-ready FastAPI backend scaffold, out of the box.
+An enterprise-grade FastAPI backend scaffold designed for AI-driven development. Highly optimized for AI agents to write Python APIs with ease.
 
 ## ✨ Core Features
 
 - 🚀 **FastAPI 0.115** - Modern, high-performance Web framework.
+- 🤖 **AI-Optimized** - Structured for AI agents to easily generate and integrate new endpoints.
 - 🔐 **JWT Authentication** - Complete user authentication system (enable/disable optional).
 - 🗄️ **Dual Database Support** - Intelligent switching between MySQL/SQLite (based on environment).
 - ⚡ **Redis Cache** - High-performance caching + connection pool management (5-minute TTL).
