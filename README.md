@@ -1,124 +1,126 @@
+English | [中文简体](./README_ZH.md)
+
 # FastAPI Base Scaffold
 
-一个简洁、易用、生产就绪的 FastAPI 后端脚手架，开箱即用。
+A concise, easy-to-use, production-ready FastAPI backend scaffold, out of the box.
 
-## ✨ 核心特性
+## ✨ Core Features
 
-- 🚀 **FastAPI 0.115** - 现代化的高性能 Web 框架
-- 🔐 **JWT 认证** - 完整的用户认证系统（可选启用）
-- 🗄️ **双数据库支持** - 智能切换 MySQL/SQLite（基于环境）
-- ⚡ **Redis 缓存** - 高性能缓存 + 连接池管理（5分钟 TTL）
-- 🛡️ **统一响应格式** - 自动包装 `{"code": 200, "data": {}}` 格式
-- 📝 **自动文档** - Swagger UI / ReDoc / RapiDoc 三合一
-- 🧩 **模块化设计** - 清晰的分层架构，易于扩展
-- 🎯 **智能异常处理** - 友好的中文错误提示
-- 🧪 **完整测试** - pytest 测试基础设施
-- 🔧 **Makefile 工具** - 一键启动、部署、清理
-- 🐳 **Docker 支持** - 多阶段构建 + docker-compose 一键部署
-- 🌏 **东八区时间** - 所有时间戳统一使用 Asia/Shanghai 时区
+- 🚀 **FastAPI 0.115** - Modern, high-performance Web framework.
+- 🔐 **JWT Authentication** - Complete user authentication system (enable/disable optional).
+- 🗄️ **Dual Database Support** - Intelligent switching between MySQL/SQLite (based on environment).
+- ⚡ **Redis Cache** - High-performance caching + connection pool management (5-minute TTL).
+- 🛡️ **Unified Response Format** - Automatically wraps responses in `{"code": 200, "data": {}}` format.
+- 📝 **Auto Documentation** - Three-in-one Swagger UI / ReDoc / RapiDoc.
+- 🧩 **Modular Design** - Clear layered architecture, easy to extend.
+- 🎯 **Intelligent Exception Handling** - Friendly error messages.
+- 🧪 **Complete Testing** - pytest testing infrastructure.
+- 🔧 **Makefile Tools** - One-click start, deploy, and cleanup.
+- 🐳 **Docker Support** - Multi-stage builds + one-click deployment with docker-compose.
+- 🌏 **UTC+8 Timezone** - All timestamps use the `Asia/Shanghai` timezone.
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 .
-├── backend/                    # 后端目录
+├── backend/                    # Backend directory
 │   ├── app/
-│   │   ├── api/               # API 路由层
-│   │   │   ├── public/        # 公开接口（无需认证）
-│   │   │   └── v1/            # API v1 版本
-│   │   │       ├── deps.py    # 依赖注入（认证、权限）
-│   │   │       └── hello.py   # 示例接口
-│   │   ├── boot/              # 应用启动配置
-│   │   │   ├── application.py # 应用工厂
-│   │   │   ├── config.py      # 配置管理（Pydantic Settings）
-│   │   │   ├── logger.py      # 日志配置
-│   │   │   ├── middleware.py  # 全局中间件（CORS、响应包装、异常处理）
-│   │   │   ├── exceptions.py  # 自定义异常
-│   │   │   ├── doc.py         # API 文档配置
-│   │   │   └── static.py      # 静态文件服务
-│   │   ├── core/              # 核心功能模块
-│   │   │   ├── jwt.py         # JWT 工具（加密、解密、验证）
-│   │   │   ├── redis_pool.py  # Redis 连接池
-│   │   │   ├── limiter.py     # API 限流器
-│   │   │   ├── security.py    # 安全工具（密码加密等）
-│   │   │   └── sync_task_limiter.py # 同步任务限流
-│   │   ├── db/                # 数据库层
-│   │   │   ├── __init__.py    # 数据库引擎初始化
-│   │   │   ├── models.py      # 数据模型（User、AccessKey）
-│   │   │   ├── mysql.py       # MySQL 连接
-│   │   │   └── sqlite.py      # SQLite 连接
-│   │   ├── library/           # 工具库
-│   │   │   ├── debug/         # 调试工具（路由导出等）
-│   │   │   ├── json/          # JSON 工具
-│   │   │   ├── queue/         # 队列工具
-│   │   │   ├── schema/        # Schema 验证
-│   │   │   └── url/           # URL 工具
-│   │   ├── schema/            # Pydantic 数据模型
-│   │   ├── middleware/        # 自定义中间件
-│   │   └── main.py            # 应用入口
-│   ├── .env                   # 环境变量配置
-│   ├── .env.example           # 环境变量示例
-│   ├── requirements.txt       # Python 依赖
-│   ├── Dockerfile             # Docker 配置
-│   ├── docker-compose.yml     # Docker Compose 配置
-│   └── .gitignore             # Git 忽略文件
-├── tests/                     # 测试目录
-├── Makefile                   # 项目管理工具
-└── README.md                  # 项目文档
+│   │   ├── api/               # API Routing layer
+│   │   │   ├── public/        # Public interfaces (no auth required)
+│   │   │   └── v1/            # API v1 version
+│   │   │       ├── deps.py    # Dependency injection (Auth, Permissions)
+│   │   │       └── hello.py   # Example interface
+│   │   ├── boot/              # App startup configuration
+│   │   │   ├── application.py # App factory
+│   │   │   ├── config.py      # Configuration management (Pydantic Settings)
+│   │   │   ├── logger.py      # Logger configuration
+│   │   │   ├── middleware.py  # Global middleware (CORS, Response wrapping, Exception handling)
+│   │   │   ├── exceptions.py  # Custom exceptions
+│   │   │   ├── doc.py         # API documentation config
+│   │   │   └── static.py      # Static file service
+│   │   ├── core/              # Core functional modules
+│   │   │   ├── jwt.py         # JWT tools (Encrypt, Decrypt, Verify)
+│   │   │   ├── redis_pool.py  # Redis connection pool
+│   │   │   ├── limiter.py     # API Rate limiter
+│   │   │   ├── security.py    # Security tools (Password hashing, etc.)
+│   │   │   └── sync_task_limiter.py # Sync task limiter
+│   │   ├── db/                # Database layer
+│   │   │   ├── __init__.py    # Database engine initialization
+│   │   │   ├── models.py      # Data models (User, AccessKey)
+│   │   │   ├── mysql.py       # MySQL connection
+│   │   │   └── sqlite.py      # SQLite connection
+│   │   ├── library/           # Utility libraries
+│   │   │   ├── debug/         # Debug tools (Route export, etc.)
+│   │   │   ├── json/          # JSON utilities
+│   │   │   ├── queue/         # Queue utilities
+│   │   │   ├── schema/        # Schema validation
+│   │   │   └── url/           # URL utilities
+│   │   ├── schema/            # Pydantic data models
+│   │   ├── middleware/        # Custom middlewares
+│   │   └── main.py            # Application entry point
+│   ├── .env                   # Environment variables configuration
+│   ├── .env.example           # Environment variables example
+│   ├── requirements.txt       # Python dependencies
+│   ├── Dockerfile             # Docker configuration
+│   ├── docker-compose.yml     # Docker Compose configuration
+│   └── .gitignore             # Git ignore file
+├── tests/                     # Testing directory
+├── Makefile                   # Project management tool
+└── README.md                  # Project documentation
 ```
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 方式一：使用 Makefile（推荐）
+### Option 1: Using Makefile (Recommended)
 
 ```bash
-# 1. 安装所有依赖
+# 1. Install all dependencies
 make install
 
-# 2. 启动后端服务
+# 2. Start the backend service
 make run-api
 
-# 3. 启动前端服务（另一个终端）
+# 3. Start the frontend service (in another terminal)
 make run-front
 ```
 
-### 方式二：手动安装
+### Option 2: Manual Installation
 
 ```bash
-# 1. 创建虚拟环境
+# 1. Create a virtual environment
 cd backend
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 2. 安装依赖
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. 配置环境变量
+# 3. Configure environment variables
 cp .env.example .env
-# 编辑 .env 文件，配置数据库、Redis 等
+# Edit .env file to configure database, Redis, etc.
 
-# 4. 启动服务
+# 4. Start the service
 uvicorn app.main:app --reload --port 8000
 ```
 
-## ⚙️ 配置说明
+## ⚙️ Configuration
 
-### 环境变量配置（`.env`）
+### Environment Variables (`.env`)
 
 ```bash
 # ============================================
-# 应用配置
+# APP CONFIGURATION
 # ============================================
-APP_ENV=development          # 环境：development/production
-APP_DEBUG=true              # 调试模式
-APP_CORS_ORIGINS=*          # CORS 允许的源（逗号分隔）
-APP_ENABLE_GZIP=true        # 启用 Gzip 压缩
+APP_ENV=development          # Environment: development/production
+APP_DEBUG=true              # Debug mode
+APP_CORS_ORIGINS=*          # CORS allowed origins (comma separated)
+APP_ENABLE_GZIP=true        # Enable Gzip compression
 
 # ============================================
-# 数据库配置
+# DATABASE CONFIGURATION
 # ============================================
-# 开发环境自动使用 SQLite (app/data/sqlite.db)
-# 生产环境 (APP_ENV=production) 使用 MySQL，需配置以下参数：
+# SQLite is used automatically in development (app/data/sqlite.db)
+# For production (APP_ENV=production), MySQL is used, configure the following:
 
 # DB_USER=root
 # DB_PASSWORD=your_database_password
@@ -127,7 +129,7 @@ APP_ENABLE_GZIP=true        # 启用 Gzip 压缩
 # DB_NAME=fastapi_scaffold
 
 # ============================================
-# Redis 配置
+# REDIS CONFIGURATION
 # ============================================
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
@@ -135,30 +137,30 @@ REDIS_PASSWORD=
 REDIS_DB=0
 
 # ============================================
-# JWT 配置
+# JWT CONFIGURATION
 # ============================================
 JWT_SECRET_KEY=your_jwt_secret_key_here_please_change
 JWT_EXPIRE_MINUTES=480
 ```
 
-### 数据库切换逻辑
+### Database Switching Logic
 
 ```python
-# 通过 APP_ENV 环境变量自动切换
+# Automatically switch based on APP_ENV
 if APP_ENV == "production":
-    使用 MySQL  # 需要配置 DB_USER、DB_PASSWORD 等
+    USE MySQL  # Requires DB_USER, DB_PASSWORD, etc.
 else:
-    使用 SQLite  # 默认路径：backend/app/data/sqlite.db
+    USE SQLite  # Default path: backend/app/data/sqlite.db
 ```
 
-## 📚 核心功能详解
+## 📚 Core Features Deep Dive
 
-### 1. 统一响应格式
+### 1. Unified Response Format
 
-所有 API 响应自动包装为统一格式：
+All API responses are automatically wrapped in a unified format:
 
 ```json
-// 成功响应
+// Success Response
 {
   "code": 200,
   "data": {
@@ -166,35 +168,35 @@ else:
   }
 }
 
-// 错误响应
+// Error Response
 {
   "code": 1,
-  "msg": "错误信息"
+  "msg": "Error Message"
 }
 ```
 
-**特点：**
-- ✅ 自动包装，无需手动返回标准格式
-- ✅ 智能检测，避免重复包装
-- ✅ 支持流式响应（StreamingResponse）
-- ✅ 友好的中文错误提示
+**Features:**
+- ✅ Auto-wrapping, no need to manually return standard formats.
+- ✅ Intelligent detection to avoid double wrapping.
+- ✅ Supports StreamingResponse.
+- ✅ Friendly error messages.
 
-### 2. 自定义异常处理
+### 2. Custom Exception Handling
 
 ```python
 from app.boot.exceptions import APIException
 
-# 抛出业务异常
-raise APIException(msg="用户不存在", code=404)
+# Raise a business exception
+raise APIException(msg="User not found", code=404)
 
-# 返回格式
+# Response format
 {
   "code": 404,
-  "msg": "用户不存在"
+  "msg": "User not found"
 }
 ```
 
-### 3. JWT 认证
+### 3. JWT Authentication
 
 ```python
 from fastapi import Depends
@@ -205,76 +207,76 @@ async def protected_route(current_user = Depends(get_current_user)):
     return {"user": current_user.username}
 ```
 
-**认证流程：**
-1. 登录获取 Token
-2. 请求头携带 `Authorization: Bearer <token>`
-3. 自动验证并注入 `current_user`
+**Authentication Flow:**
+1. Login to get Token.
+2. Include `Authorization: Bearer <token>` in request headers.
+3. Automatically verify and inject `current_user`.
 
-### 4. Redis 缓存
+### 4. Redis Caching
 
 ```python
 from app.core.redis_pool import get_redis
 
 redis = get_redis()
-redis.set("key", "value", ex=3600)  # 设置 1 小时过期
+redis.set("key", "value", ex=3600)  # Set 1 hour expiration
 value = redis.get("key")
 ```
 
-### 5. API 限流
+### 5. API Rate Limiting
 
 ```python
 from app.core.limiter import rate_limit
 
 @router.get("/api")
-@rate_limit(max_requests=100, window=60)  # 每分钟最多 100 次
+@rate_limit(max_requests=100, window=60)  # Max 100 requests per minute
 async def limited_api():
     return {"status": "ok"}
 ```
 
-## 🔧 Makefile 命令
+## 🔧 Makefile Commands
 
 ```bash
-# 安装依赖
-make install              # 安装所有依赖（后端 + 前端）
-make venv                 # 创建 Python 虚拟环境
-make frontend-deps        # 安装前端依赖
+# Install dependencies
+make install              # Install all dependencies (Backend + Frontend)
+make venv                 # Create Python virtual environment
+make frontend-deps        # Install frontend dependencies
 
-# 运行服务
-make run-api              # 启动 FastAPI 后端（自动清理端口）
-make stop-api             # 停止 FastAPI 后端
-make run-front            # 启动 Vue 前端
+# Run services
+make run-api              # Start FastAPI backend (cleans port automatically)
+make stop-api             # Stop FastAPI backend
+make run-front            # Start Vue frontend
 
-# 测试
-make test                 # 运行所有测试
-make test-verbose         # 运行测试并显示详细输出
+# Test
+make test                 # Run all tests
+make test-verbose         # Run tests with detailed output
 
-# 构建和清理
-make build                # 构建前端生产包
-make clean                # 清理临时文件
+# Build and Clean
+make build                # Build production bundle for frontend
+make clean                # Clean temporary files
 ```
 
-## 📖 API 文档
+## 📖 API Documentation
 
-启动服务后访问：
+Access after starting the service:
 
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 - **RapiDoc**: http://localhost:8000/rapidoc
 
-### 示例接口
+### Example Endpoints
 
-| 接口 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| Hello World | GET | `/api/v1/hello` | 示例接口 |
-| 健康检查 | GET | `/api/v1/ping` | 系统健康状态 |
+| Interface | Method | Path | Description |
+|-----------|--------|------|-------------|
+| Hello World | GET | `/api/v1/hello` | Example endpoint |
+| Health Check | GET | `/api/v1/ping` | System health status |
 
-测试接口：
+Testing the endpoint:
 
 ```bash
 curl http://localhost:8000/api/v1/hello
 ```
 
-返回：
+Response:
 
 ```json
 {
@@ -288,25 +290,25 @@ curl http://localhost:8000/api/v1/hello
 }
 ```
 
-## 🧪 测试
+## 🧪 Testing
 
-使用 pytest 进行测试：
+Run tests with pytest:
 
 ```bash
-# 运行所有测试
+# Run all tests
 python -m pytest tests/
 
-# 运行测试并显示详细输出
+# Run tests with detailed output
 python -m pytest tests/ -v
 
-# 运行特定测试文件
+# Run a specific test file
 python -m pytest tests/test_hello.py
 
-# 运行测试并显示覆盖率
+# Run tests with coverage
 python -m pytest tests/ --cov=app --cov-report=html
 ```
 
-**测试文件示例：**
+**Test Example:**
 
 ```python
 # tests/test_hello.py
@@ -323,15 +325,15 @@ def test_hello_world():
     assert "message" in response.json()["data"]
 ```
 
-## 🔨 如何添加新接口
+## 🔨 How to Add New Endpoints
 
-### 1. 创建路由文件
+### 1. Create a Routing File
 
 ```python
 # backend/app/api/v1/users.py
 from fastapi import APIRouter
 
-router = APIRouter(prefix="/users", tags=["用户管理"])
+router = APIRouter(prefix="/users", tags=["User Management"])
 
 @router.get("/")
 async def get_users():
@@ -342,58 +344,58 @@ async def create_user(username: str):
     return {"id": 1, "username": username}
 ```
 
-### 2. 注册路由
+### 2. Register the Route
 
 ```python
 # backend/app/api/v1/__init__.py
 from fastapi import APIRouter
-from . import hello, users  # 导入新模块
+from . import hello, users  # Import new module
 
 router = APIRouter(prefix="/api/v1")
 
 router.include_router(hello.router)
-router.include_router(users.router)  # 注册新路由
+router.include_router(users.router)  # Register new route
 ```
 
-### 3. 访问接口
+### 3. Access Endpoint
 
 - http://localhost:8000/api/v1/users
-- 自动出现在 `/docs` 文档中
+- Automatically appears in `/docs`.
 
-## 🗄️ 数据模型
+## 🗄️ Data Models
 
-### User（用户）
-
-```python
-- id: 主键
-- username: 用户名（唯一）
-- hashed_password: 加密密码
-- last_login: 最后登录时间
-- fixed: 是否为管理员
-- created_at / updated_at: 时间戳
-```
-
-### AccessKey（访问密钥）
+### User
 
 ```python
-- id: 主键
-- secret_key: 密钥内容（唯一）
-- description: 密钥描述
-- max_qps: 最大 QPS 限制
-- created_by: 创建用户 ID
-- created_at / updated_at: 时间戳
+- id: Primary Key
+- username: Username (Unique)
+- hashed_password: Encrypted password
+- last_login: Last login time
+- fixed: Is admin
+- created_at / updated_at: Timestamps
 ```
 
-## 🐳 Docker 部署
+### AccessKey
 
-### 构建镜像
+```python
+- id: Primary Key
+- secret_key: Key content (Unique)
+- description: Description
+- max_qps: Max QPS limit
+- created_by: Created by User ID
+- created_at / updated_at: Timestamps
+```
+
+## 🐳 Docker Deployment
+
+### Build Image
 
 ```bash
 cd backend
 docker build -t fastapi-scaffold .
 ```
 
-### 运行容器
+### Run Container
 
 ```bash
 docker run -d \
@@ -405,124 +407,124 @@ docker run -d \
   fastapi-scaffold
 ```
 
-# Docker Compose（推荐）
+# Docker Compose (Recommended)
 
-使用 `docker-compose.yml` 快速启动完整环境：
+Use `docker-compose.yml` to quickly start the full environment:
 
 ```bash
-# 启动所有服务（API、MySQL、Redis）
+# Start all services (API, MySQL, Redis)
 docker-compose up -d
 
-# 查看日志
+# View logs
 docker-compose logs -f api
 
-# 停止服务
+# Stop services
 docker-compose down
 
-# 停止并删除数据卷
+# Stop and remove volumes
 docker-compose down -v
 ```
 
-**docker-compose.yml 配置说明：**
-- **api**: FastAPI 应用服务，端口 8000
-- **mysql**: MySQL 8.0 数据库，端口 3306，root 密码 `root123`
-- **redis**: Redis 缓存服务，端口 6379
+**docker-compose.yml configuration:**
+- **api**: FastAPI application service, port 8000.
+- **mysql**: MySQL 8.0 database, port 3306, root password `root123`.
+- **redis**: Redis cache service, port 6379.
 
-**健康检查：**
-- 服务启动后会自动进行健康检查
-- 数据库初始化需要等待 10-30 秒
-- 可使用 `docker-compose ps` 查看服务状态
+**Health Check:**
+- Services automatically perform health checks after startup.
+- Database initialization takes 10-30 seconds.
+- Use `docker-compose ps` to check service status.
 
-## 📝 开发规范
+## 📝 Development Standards
 
-### 代码风格
+### Code Style
 
-- 遵循 **PEP 8** 规范
-- 使用 **类型注解**（Type Hints）
-- 编写清晰的函数和变量名称
-- 添加必要的注释和文档字符串
+- Follow **PEP 8**.
+- Use **Type Hints**.
+- Write clear function and variable names.
+- Add necessary comments and docstrings.
 
-### 提交规范
+### Commit Standards
 
 ```
-feat: 新增功能
-fix: 修复 bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 重构
-test: 测试相关
-chore: 构建/工具相关
+feat: New feature
+fix: Bug fix
+docs: Documentation update
+style: Code formatting
+refactor: Refactor
+test: Test related
+chore: Build/Tool related
 ```
 
-### 目录规范
+### Directory Standards
 
-- `api/` - 只放路由定义，不写业务逻辑
-- `core/` - 核心功能，可复用的工具
-- `db/` - 数据库相关，模型定义
-- `library/` - 通用工具库
-- `schema/` - Pydantic 数据模型
+- `api/` - Routing definitions only, no business logic.
+- `core/` - Core features, reusable utilities.
+- `db/` - Database related, model definitions.
+- `library/` - General utility libraries.
+- `schema/` - Pydantic data models.
 
-## 🎯 最佳实践
+## 🎯 Best Practices
 
-### 1. 环境隔离
+### 1. Environment Isolation
 
 ```bash
-# 开发环境
-APP_ENV=development  # 使用 SQLite
+# Development
+APP_ENV=development  # Use SQLite
 
-# 生产环境
-APP_ENV=production   # 使用 MySQL
+# Production
+APP_ENV=production   # Use MySQL
 ```
 
-### 2. 配置管理
+### 2. Configuration Management
 
-所有配置通过 `.env` 文件管理，不要硬编码：
+Manage all configs via `.env`, do not hardcode:
 
 ```python
-# ❌ 不推荐
+# ❌ Not recommended
 db_host = "localhost"
 
-# ✅ 推荐
+# ✅ Recommended
 from app.boot import settings
 db_host = settings.database.host
 ```
 
-### 3. 异常处理
+### 3. Exception Handling
 
-使用自定义异常，提供友好提示：
+Use custom exceptions for friendly hints:
 
 ```python
-# ❌ 不推荐
+# ❌ Not recommended
 raise Exception("error")
 
-# ✅ 推荐
-raise APIException(msg="用户名已存在", code=400)
+# ✅ Recommended
+raise APIException(msg="Username already exists", code=400)
 ```
 
-### 4. 日志记录
+### 4. Logging
 
 ```python
 from app.boot import logger
 
-logger.info("用户登录成功")
-logger.error("数据库连接失败", exc_info=True)
+logger.info("User login successful")
+logger.error("Database connection failed", exc_info=True)
 ```
 
-## 🔍 常见问题
+## 🔍 FAQ
 
-### Q: 如何切换数据库？
+### Q: How to switch databases?
 
-A: 修改 `.env` 中的 `APP_ENV`：
+A: Modify `APP_ENV` in `.env`:
 - `development` → SQLite
 - `production` → MySQL
 
-### Q: 端口被占用怎么办？
+### Q: What if the port is occupied?
 
-A: 使用 `make run-api` 会自动清理 8000 端口
+A: Use `make run-api`, it automatically cleans up port 8000.
 
-### Q: 如何禁用响应自动包装？
+### Q: How to disable automatic response wrapping?
 
-A: 在中间件中添加路径到跳过列表：
+A: Add the path to the skip list in the middleware:
 
 ```python
 # backend/app/boot/middleware.py
@@ -530,24 +532,24 @@ if request.url.path.startswith(("/docs", "/your-path")):
     return response
 ```
 
-### Q: 如何添加新的配置项？
+### Q: How to add new configuration items?
 
-A: 在 `backend/app/boot/config.py` 中添加：
+A: Add to `backend/app/boot/config.py`:
 
 ```python
 class AppConfig(BaseSettings):
     new_config: str = Field(default="value", validation_alias="NEW_CONFIG")
 ```
 
-然后在 `.env` 中配置：
+Then configure in `.env`:
 
 ```bash
 NEW_CONFIG=your_value
 ```
 
-## 🤝 贡献
+## 🤝 Contribution
 
-欢迎提交 Issue 和 Pull Request！
+Issues and Pull Requests are welcome!
 
 ## 📄 License
 
@@ -555,4 +557,4 @@ MIT License
 
 ---
 
-**祝你使用愉快！如有问题欢迎提 Issue 🎉**
+**Enjoy using FastAPI Base Scaffold! 🎉**
