@@ -16,6 +16,10 @@
    - **框架插件** → `app/boot/plugins.py`（CORS、响应包装、异常处理）
    - **业务中间件** → `app/middleware/`（访问日志、链路追踪等）
 6. **业务逻辑必须下沉到 `app/service/`** —— `api/v1/` 只做参数解析和返回，**禁止在路由里写 DB 查询、规则判断、跨模型操作**。详见下方"三层职责"。
+7. **有显著改动必须更新 `CHANGELOG.md`**（仓库根目录），格式遵循 Keep a Changelog：
+   - `[Unreleased]` 节累积未发版改动
+   - 发版时改成 `[x.y.z] — YYYY-MM-DD` 并同步升级 `boot/application.py` 与 `pyproject.toml` 的 `version`
+   - 仅改注释 / 修笔误 / 重命名变量这类小事不必记
 
 ## 三层职责（必读）
 

@@ -1,4 +1,4 @@
-English | [中文简体](./README_ZH.md)
+English | [中文简体](./README_ZH.md) | [Changelog](./CHANGELOG.md)
 
 # FastAPI Base Scaffold
 
