@@ -16,8 +16,11 @@ from .sqlite import init_sqlite
 from .mysql import init_mysql
 from app.boot import settings
 
-def init_engine():  
-    if os.getenv("APP_ENV") == "production":
+def init_engine():
+    # 默认 MySQL；只有显式设置 APP_USE_SQLITE=true 才走 SQLite（本地轻量开发）
+    if os.getenv("APP_USE_SQLITE", "").lower() == "true":
+        _engine = init_sqlite()
+    else:
         _engine = init_mysql(
             db_host=settings.database.host,
             db_user=settings.database.user,
@@ -25,9 +28,7 @@ def init_engine():
             db_port=settings.database.port,
             db_name=settings.database.db_name,
         )
-    else:
-        _engine = init_sqlite()
-    return _engine 
+    return _engine
         
 engine = init_engine()
         

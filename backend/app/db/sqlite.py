@@ -141,13 +141,12 @@ def init_sample_data(engine):
     """初始化样例数据（可选）"""
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
-    
     try:
-        # 在这里添加初始化数据
-        # 例如： db.add(User(name="admin"))
-        # md5 32位大些 main 123456
-        db.add(User(username="main",hashed_password="E10ADC3949BA59ABBE56E057F20F883E",fixed=True))
-        db.commit()
+        if not db.query(User).filter(User.username == "main").first():
+            from app.core.security import get_password_hash
+            db.add(User(username="main", hashed_password=get_password_hash("123456"), fixed=True))
+            db.commit()
+            print("初始化样例数据完成")
     except Exception as e:
         db.rollback()
         print("初始化数据失败:", e)

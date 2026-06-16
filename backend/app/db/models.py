@@ -6,12 +6,14 @@ import pytz
 from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 # 定义东八区时区对象
 EAST_8_TIMEZONE = pytz.timezone("Asia/Shanghai")
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 class AccessKey(Base):
     """访问密钥表"""
@@ -32,7 +34,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, nullable=False, comment="用户名")
-    hashed_password = Column(String(60), nullable=False, comment="加密后的密码")
+    hashed_password = Column(String(128), nullable=False, comment="加密后的密码")
     last_login = Column(sa.DateTime(timezone=True), comment="最后登录时间")
     fixed = Column(Boolean, default=False, comment="是否为固定管理员用户")
     created_at = Column(sa.DateTime(timezone=True), default=lambda: datetime.now(EAST_8_TIMEZONE).replace(microsecond=0), comment="创建时间")
