@@ -1,19 +1,20 @@
-from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
+
 class TokenPayload(BaseModel):
-    """JWT 负载模型"""
-    sub: str  # 主题(用户ID/用户名)
-    exp: datetime  # 过期时间
-    iat: Optional[datetime] = None  # 签发时间
-    jti: Optional[str] = None  # JWT ID
-    
-    model_config = ConfigDict(from_attributes=True)
+    """JWT 负载模型（exp/iat 为 Unix 时间戳）"""
+    sub: str
+    exp: int
+    iat: Optional[int] = None
+    jti: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
 
 class TokenResponse(BaseModel):
-    """令牌响应模型"""
+    """登录令牌响应"""
     access_token: str
-    refresh_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
-    expires_in: int  # 过期时间(秒)
+    expires_in: int  # 过期时间（秒）
