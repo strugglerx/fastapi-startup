@@ -1,4 +1,8 @@
-.PHONY: help install venv frontend-deps run-api stop-api run-front clean build test
+.PHONY: help install venv frontend-deps run-api stop-api run-front clean build test format lint docs
+
+# 可由命令行覆盖：make run-api PORT=9000 HOST=0.0.0.0
+PORT ?= 8000
+HOST ?= 0.0.0.0
 
 help: ## 显示帮助信息
 	@echo "可用命令:"
@@ -34,15 +38,19 @@ frontend-deps: ## 安装前端依赖
 		echo "错误: frontend 目录不存在"; \
 	fi
 
-run-api: ## 启动 FastAPI 后端
-	@echo "停止已运行的服务..."
-	lsof -ti:8000 | xargs kill -9 2>/dev/null || true
-	@echo "启动 FastAPI 后端..."
-	cd app && APP_ENV=development uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+run-api: ## 启动 FastAPI 后端（开发模式，自动重载）
+	@echo "停止占用 $(PORT) 端口的进程..."
+	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
+	@echo "启动 FastAPI 后端 http://$(HOST):$(PORT) ..."
+	APP_ENV=development uvicorn app.main:app --host $(HOST) --port $(PORT) --reload
+
+run-api-prod: ## 启动 FastAPI 后端（生产模式，多 worker）
+	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
+	APP_ENV=production uvicorn app.main:app --host $(HOST) --port $(PORT) --workers 4
 
 stop-api: ## 停止 FastAPI 后端
-	@echo "停止 FastAPI 后端..."
-	lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+	@echo "停止占用 $(PORT) 端口的进程..."
+	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
 
 run-front: ## 启动前端服务
 	@if [ -d "frontend" ]; then \

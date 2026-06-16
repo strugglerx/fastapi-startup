@@ -62,5 +62,3 @@ htmlcov/
 routes.md
 auto_docs/
 
-# Docker
-.dockerignore
