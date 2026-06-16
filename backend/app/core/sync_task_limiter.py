@@ -3,10 +3,9 @@
 防止大量同步任务占满 Web Worker
 """
 import time
-import os
 from typing import Dict
 from threading import Lock
-from app.boot import logger
+from app.boot import logger, app_config
 
 
 class SyncTaskLimiter:
@@ -117,9 +116,6 @@ class SyncTaskLimiter:
             }
 
 
-# 全局实例
-# 默认最多 10 个并发同步任务
-# 可通过环境变量配置：MAX_SYNC_CONCURRENT
-MAX_SYNC_CONCURRENT = int(os.getenv("MAX_SYNC_CONCURRENT", "10"))
-sync_task_limiter = SyncTaskLimiter(max_concurrent=MAX_SYNC_CONCURRENT)
+# 全局实例（容量来自 settings，由 MAX_SYNC_CONCURRENT 环境变量配置）
+sync_task_limiter = SyncTaskLimiter(max_concurrent=app_config.max_sync_concurrent)
 

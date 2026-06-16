@@ -17,17 +17,20 @@ redis==6.2.0
 python-dotenv==1.1.1
 pydantic>=2.11.5
 pydantic-settings==2.6.1
-toml==0.10.2
 
 # HTTP 请求
 requests==2.32.4
+httpx==0.28.1
 
 # 文件上传
 python-multipart==0.0.20
 
-# 加密（用于JWT）
+# 加密（用于JWT + 密码哈希）
 cryptography==45.0.6
+bcrypt==5.0.0
+
+# 性能
+orjson==3.10.18
 
 # 其他工具
-asgiref==3.8.1
 nest-asyncio==1.6.0
