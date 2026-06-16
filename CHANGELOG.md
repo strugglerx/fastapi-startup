@@ -7,6 +7,22 @@
 
 ---
 
+## [1.1.1] — 2026-06-16
+
+补丁版本：修复运行时产物路径错位与 Makefile 启动入口 bug，补 `.dockerignore`。
+
+### 修复
+
+- **`auto_docs/` / `routes.md` / 静态资源目录误用 cwd 相对路径** —— 从仓库根启动（如 `uvicorn backend.app.main:app`）时这些产物会洒到仓库根。新增 `app/paths.py` 集中所有项目路径常量（基于 `__file__` 解析），`boot/doc.py`、`boot/static.py`、`library/debug/__init__.py` 改用 `BACKEND_DIR / AUTO_DOCS_DIR / STATIC_DIR / ROUTES_MD_PATH`，无论从哪启动产物都落在 `backend/` 下
+- **`make run-api` 启不起来** —— 原 Makefile 中 `cd app && uvicorn main:app` 会因 `main.py` 内的相对导入（`from .boot.application import create_app`）失败。改为在 `backend/` 下执行 `uvicorn app.main:app`；同时端口/主机抽成变量（`make run-api PORT=9000`），新增 `run-api-prod` 目标（多 worker 生产启动）
+
+### 新增
+
+- **`app/paths.py`** —— 集中路径常量（`BACKEND_DIR / APP_DIR / DATA_DIR / STATIC_DIR / AUTO_DOCS_DIR / ROUTES_MD_PATH / LOGS_DIR`）
+- **`backend/.dockerignore`** —— 之前缺失，导致 build context 把 `venv/`、`logs/`、`*.sqlite`、`__pycache__/` 等全部传给 Docker daemon。同时修复 `.gitignore` 中误把 `.dockerignore` 自身屏蔽掉的规则
+
+---
+
 ## [1.1.0] — 2026-06-16
 
 围绕"AI 驱动开发"做了一轮系统性升级：引入分层架构、现代化基础设施、补齐测试与文档。

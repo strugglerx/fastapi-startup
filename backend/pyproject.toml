@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-startup"
-version = "1.1.0"
+version = "1.1.1"
 description = "AI-friendly FastAPI scaffold with auto-migration, JWT, rate limiting, Redis pub/sub"
 requires-python = ">=3.9"
 

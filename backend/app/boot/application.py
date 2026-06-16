@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
     app = ExtendedFastAPI(
         debug=app_config.debug,
         title="engine",
-        version="1.1.0",
+        version="1.1.1",
         json_as_ascii=False,
         docs_url=None if is_prod else "/docs",
         openapi_url=None if is_prod else "/openapi.json",
