@@ -1,0 +1,37 @@
+[project]
+name = "fastapi-startup"
+version = "1.0.0"
+description = "AI-friendly FastAPI scaffold with auto-migration, JWT, rate limiting, Redis pub/sub"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # warnings
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # long lines（中文注释易超长）
+    "B008",  # FastAPI 的 Depends(Default()) 是惯用法
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]
+"app/db/__init__.py" = ["F401", "F403"]
+"app/schema/__init__.py" = ["F401"]

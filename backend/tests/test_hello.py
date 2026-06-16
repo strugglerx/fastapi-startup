@@ -1,45 +1,29 @@
-"""
-Hello World 接口测试
-"""
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
+def test_hello_world(client):
+    r = client.get("/api/v1/hello")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["code"] == 0
+    assert body["data"]["message"] == "Hello, base scaffold!"
 
 
-def test_hello_world():
-    """测试 Hello World 接口"""
-    response = client.get("/api/v1/hello")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["code"] == 0
-    assert "data" in data
-    assert data["data"]["message"] == "Hello, base scaffold!"
+def test_ping(client):
+    r = client.get("/api/v1/ping")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["code"] == 0
+    assert body["data"]["status"] == "ok"
 
 
-def test_ping():
-    """测试 Ping 健康检查接口"""
-    response = client.get("/api/v1/ping")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["code"] == 0
-    assert data["data"]["status"] == "ok"
+def test_docs(client):
+    r = client.get("/docs")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
 
 
-def test_docs_endpoint():
-    """测试文档接口可访问"""
-    response = client.get("/docs")
-    assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"]
-
-
-def test_openapi_json():
-    """测试 OpenAPI JSON 接口"""
-    response = client.get("/openapi.json")
-    assert response.status_code == 200
-    data = response.json()
+def test_openapi(client):
+    r = client.get("/openapi.json")
+    assert r.status_code == 200
+    data = r.json()
     assert "openapi" in data
-    assert "paths" in data
     assert "/api/v1/hello" in data["paths"]
     assert "/api/v1/ping" in data["paths"]
