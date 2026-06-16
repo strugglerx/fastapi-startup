@@ -11,7 +11,7 @@
 - 🔐 **JWT 认证** - 完整的用户认证 system（可选启用）
 - 🗄️ **双数据库支持** - 智能切换 MySQL/SQLite（基于环境）
 - ⚡ **Redis 缓存** - 高性能缓存 + 连接池管理（5分钟 TTL）
-- 🛡️ **统一响应格式** - 自动包装 `{"code": 200, "data": {}}` 格式
+- 🛡️ **统一响应格式** - 自动包装 `{"code": 0, "data": {}}` 格式
 - 📝 **自动文档** - Swagger UI / ReDoc / RapiDoc 三合一
 - 🧩 **模块化设计** - 清晰的分层架构，易于扩展
 - 🎯 **智能异常处理** - 友好的中文错误提示
@@ -32,12 +32,13 @@
 │   │   │       ├── deps.py    # 依赖注入（认证、权限）
 │   │   │       └── hello.py   # 示例接口
 │   │   ├── boot/              # 应用启动配置
-│   │   │   ├── application.py # 应用工厂
+│   │   │   ├── application.py # 应用工厂 + lifespan 生命周期
 │   │   │   ├── config.py      # 配置管理（Pydantic Settings）
 │   │   │   ├── logger.py      # 日志配置
-│   │   │   ├── middleware.py  # 全局中间件（CORS、响应包装、异常处理）
+│   │   │   ├── plugins.py     # 框架插件（CORS、响应包装、异常处理）
 │   │   │   ├── exceptions.py  # 自定义异常
 │   │   │   ├── doc.py         # API 文档配置
+│   │   │   ├── openapi.py     # OpenAPI x-tagGroups 自定义
 │   │   │   └── static.py      # 静态文件服务
 │   │   ├── core/              # 核心功能模块
 │   │   │   ├── jwt.py         # JWT 工具（加密、解密、验证）
@@ -163,7 +164,7 @@ else:
 ```json
 // 成功响应
 {
-  "code": 200,
+  "code": 0,
   "data": {
     "message": "Hello World"
   }
@@ -216,23 +217,31 @@ async def protected_route(current_user = Depends(get_current_user)):
 ### 4. Redis 缓存
 
 ```python
-from app.core.redis_pool import get_redis
+from app.core.redis_pool import RedisPool
 
-redis = get_redis()
+redis = RedisPool.get_redis()
 redis.set("key", "value", ex=3600)  # 设置 1 小时过期
 value = redis.get("key")
+
+# 异步用法
+redis_async = await RedisPool.get_async_redis()
+await redis_async.set("k", "v")
 ```
 
-### 5. API 限流
+### 5. API 限流（基于 AccessKey 的动态 IP 限流）
 
 ```python
-from app.core.limiter import rate_limit
+from fastapi import Request
+from app.core.limiter import get_rate_limiter
 
 @router.get("/api")
-@rate_limit(max_requests=100, window=60)  # 每分钟最多 100 次
-async def limited_api():
+async def limited_api(request: Request):
+    get_rate_limiter().enforce(request)
+    # 限速值来自 AccessKey.max_qps，按密钥独立配置
     return {"status": "ok"}
 ```
+
+客户端请求头需带 `X-Access-Key: <secret>`；限流器使用 Redis 缓存密钥信息（60 秒），通过原子 Lua 脚本 INCR+EXPIRE 做每 IP 限速。
 
 ## 🔧 Makefile 命令
 
@@ -281,7 +290,7 @@ curl http://localhost:8000/api/v1/hello
 
 ```json
 {
-  "code": 200,
+  "code": 0,
   "data": {
     "message": "Hello, base scaffold!",
     "status": "success",
@@ -528,8 +537,8 @@ A: 使用 `make run-api` 会自动清理 8000 端口
 A: 在中间件中添加路径到跳过列表：
 
 ```python
-# backend/app/boot/middleware.py
-if request.url.path.startswith(("/docs", "/your-path")):
+# backend/app/boot/plugins.py
+if any(request.url.path.startswith(p) for p in ("/docs", "/your-path")):
     return response
 ```
 

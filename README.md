@@ -11,7 +11,7 @@ An enterprise-grade FastAPI backend scaffold designed for AI-driven development.
 - 🔐 **JWT Authentication** - Complete user authentication system (enable/disable optional).
 - 🗄️ **Dual Database Support** - Intelligent switching between MySQL/SQLite (based on environment).
 - ⚡ **Redis Cache** - High-performance caching + connection pool management (5-minute TTL).
-- 🛡️ **Unified Response Format** - Automatically wraps responses in `{"code": 200, "data": {}}` format.
+- 🛡️ **Unified Response Format** - Automatically wraps responses in `{"code": 0, "data": {}}` format.
 - 📝 **Auto Documentation** - Three-in-one Swagger UI / ReDoc / RapiDoc.
 - 🧩 **Modular Design** - Clear layered architecture, easy to extend.
 - 🎯 **Intelligent Exception Handling** - Friendly error messages.
@@ -32,12 +32,13 @@ An enterprise-grade FastAPI backend scaffold designed for AI-driven development.
 │   │   │       ├── deps.py    # Dependency injection (Auth, Permissions)
 │   │   │       └── hello.py   # Example interface
 │   │   ├── boot/              # App startup configuration
-│   │   │   ├── application.py # App factory
+│   │   │   ├── application.py # App factory + lifespan
 │   │   │   ├── config.py      # Configuration management (Pydantic Settings)
 │   │   │   ├── logger.py      # Logger configuration
-│   │   │   ├── middleware.py  # Global middleware (CORS, Response wrapping, Exception handling)
+│   │   │   ├── plugins.py     # Framework plugins (CORS, Response wrapping, Exception handling)
 │   │   │   ├── exceptions.py  # Custom exceptions
 │   │   │   ├── doc.py         # API documentation config
+│   │   │   ├── openapi.py     # OpenAPI x-tagGroups customization
 │   │   │   └── static.py      # Static file service
 │   │   ├── core/              # Core functional modules
 │   │   │   ├── jwt.py         # JWT tools (Encrypt, Decrypt, Verify)
@@ -52,8 +53,7 @@ An enterprise-grade FastAPI backend scaffold designed for AI-driven development.
 │   │   │   └── sqlite.py      # SQLite connection
 │   │   ├── library/           # Utility libraries
 │   │   │   ├── debug/         # Debug tools (Route export, etc.)
-│   │   │   ├── json/          # JSON utilities
-│   │   │   ├── queue/         # Queue utilities
+│   │   │   ├── json/          # JSON utilities (orjson-based)
 │   │   │   ├── schema/        # Schema validation
 │   │   │   └── url/           # URL utilities
 │   │   ├── schema/            # Pydantic data models
@@ -147,12 +147,16 @@ JWT_EXPIRE_MINUTES=480
 ### Database Switching Logic
 
 ```python
-# Automatically switch based on APP_ENV
-if APP_ENV == "production":
-    USE MySQL  # Requires DB_USER, DB_PASSWORD, etc.
-else:
+# Default: MySQL. Only switch to SQLite when explicitly opted in.
+if os.getenv("APP_USE_SQLITE") == "true":
     USE SQLite  # Default path: backend/app/data/sqlite.db
+else:
+    USE MySQL   # Configure DB_USER / DB_PASSWORD / DB_HOST / DB_PORT / DB_NAME
 ```
+
+### Auto Field Migration
+
+Modify `app/db/models.py` and restart — missing columns are `ALTER TABLE`-added automatically. No alembic required.
 
 ## 📚 Core Features Deep Dive
 
@@ -163,7 +167,7 @@ All API responses are automatically wrapped in a unified format:
 ```json
 // Success Response
 {
-  "code": 200,
+  "code": 0,
   "data": {
     "message": "Hello World"
   }
@@ -216,23 +220,31 @@ async def protected_route(current_user = Depends(get_current_user)):
 ### 4. Redis Caching
 
 ```python
-from app.core.redis_pool import get_redis
+from app.core.redis_pool import RedisPool
 
-redis = get_redis()
+redis = RedisPool.get_redis()
 redis.set("key", "value", ex=3600)  # Set 1 hour expiration
 value = redis.get("key")
+
+# Async usage
+redis_async = await RedisPool.get_async_redis()
+await redis_async.set("k", "v")
 ```
 
-### 5. API Rate Limiting
+### 5. API Rate Limiting (AccessKey-based)
 
 ```python
-from app.core.limiter import rate_limit
+from fastapi import Depends, Request
+from app.core.limiter import get_rate_limiter
 
 @router.get("/api")
-@rate_limit(max_requests=100, window=60)  # Max 100 requests per minute
-async def limited_api():
+async def limited_api(request: Request):
+    get_rate_limiter().enforce(request)
+    # IP rate limit driven by AccessKey.max_qps configured per key
     return {"status": "ok"}
 ```
+
+Clients pass `X-Access-Key: <secret>` header; limiter caches the key info in Redis (60s TTL), uses an atomic Lua INCR+EXPIRE for per-IP throttling.
 
 ## 🔧 Makefile Commands
 
@@ -281,7 +293,7 @@ Response:
 
 ```json
 {
-  "code": 200,
+  "code": 0,
   "data": {
     "message": "Hello, base scaffold!",
     "status": "success",
@@ -528,8 +540,8 @@ A: Use `make run-api`, it automatically cleans up port 8000.
 A: Add the path to the skip list in the middleware:
 
 ```python
-# backend/app/boot/middleware.py
-if request.url.path.startswith(("/docs", "/your-path")):
+# backend/app/boot/plugins.py
+if any(request.url.path.startswith(p) for p in ("/docs", "/your-path")):
     return response
 ```
 
