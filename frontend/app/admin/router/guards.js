@@ -1,12 +1,8 @@
 import { getToken } from "../api/base.js"
 import { useMenuStore } from "../stores/menu.js"
 
-const WHITE_PATHS = new Set(["/404"])
-
 export function setupGuards(router) {
   router.beforeEach(async (to) => {
-    if (WHITE_PATHS.has(to.path)) return true
-
     if (!getToken()) {
       const hash = window.location.hash || "#/"
       window.location.assign("/login/?redirect=" + encodeURIComponent(hash))
@@ -19,15 +15,16 @@ export function setupGuards(router) {
         await menu.load()
         return { ...to, replace: true }
       } catch (error) {
+        // menu.load 内部失败（如 401）由 fetch.js 拦截器统一跳登录，这里不再重定向到 /404，避免卡死
         console.error("[guards] menu load failed", error)
         menu.reset()
-        return { path: "/404" }
+        return false
       }
     }
 
-    if (to.matched.length === 0 || to.path === "/" || to.path === "/dashboard") {
+    if (to.path === "/" || to.path === "/dashboard" || to.path === "/404") {
       const firstPage = menu.rawList.value.find((item) => item.component !== "__group__" && item.path)
-      if (firstPage && firstPage.path !== to.path && (to.path === "/" || to.path === "/dashboard" || to.path === "/404")) {
+      if (firstPage && firstPage.path !== to.path) {
         return { path: firstPage.path }
       }
     }

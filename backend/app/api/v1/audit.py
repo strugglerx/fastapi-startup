@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
-from app.api.v1.deps import require_admin
+from app.api.v1.deps import require_permission
 from app.service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["审计日志"])
@@ -12,7 +12,7 @@ async def list_logs(
     username: Optional[str] = Query(None),
     action: Optional[str] = Query(None),
     status_code: Optional[int] = Query(None),
-    admin=Depends(require_admin),
+    _user=Depends(require_permission("system:audit")),
 ):
     return AuditService.list_logs(
         page=page,

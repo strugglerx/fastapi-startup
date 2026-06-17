@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import require_admin
+from app.api.v1.deps import require_permission
 from app.service import RoleService
 
 
@@ -25,17 +25,17 @@ class UpdateRoleReq(BaseModel):
 
 
 @router.get("", summary="角色列表")
-async def list_roles(_admin=Depends(require_admin)):
+async def list_roles(_user=Depends(require_permission("system:role"))):
     return RoleService.list()
 
 
 @router.post("", summary="新建角色")
-async def create_role(req: CreateRoleReq, _admin=Depends(require_admin)):
+async def create_role(req: CreateRoleReq, _user=Depends(require_permission("system:role:create"))):
     return RoleService.create(req.code, req.name, req.description, req.sort)
 
 
 @router.put("/{id_}", summary="更新角色")
-async def update_role(id_: int, req: UpdateRoleReq, _admin=Depends(require_admin)):
+async def update_role(id_: int, req: UpdateRoleReq, _user=Depends(require_permission("system:role:update"))):
     return RoleService.update(
         id_,
         name=req.name,
@@ -46,6 +46,6 @@ async def update_role(id_: int, req: UpdateRoleReq, _admin=Depends(require_admin
 
 
 @router.delete("/{id_}", summary="删除角色")
-async def delete_role(id_: int, _admin=Depends(require_admin)):
+async def delete_role(id_: int, _user=Depends(require_permission("system:role:delete"))):
     RoleService.delete(id_)
     return {"id": id_, "deleted": True}

@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import get_current_user, require_admin, require_permission
+from app.api.v1.deps import get_current_user, require_permission
 from app.service import UserService
 
 router = APIRouter(prefix="/admins", tags=["管理员"])
@@ -44,7 +44,7 @@ async def list_admins(
     keyword:   Optional[str] = Query(None),
     role:      Optional[str] = Query(None, pattern=_ROLE_PATTERN),
     is_active: Optional[bool] = Query(None),
-    _admin=Depends(require_permission("system:admin:list")),
+    _user=Depends(require_permission("system:admin")),
 ):
     return UserService.list_admins(
         page=page, size=size, keyword=keyword, role=role, is_active=is_active,

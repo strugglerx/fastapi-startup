@@ -55,7 +55,7 @@ export const clearRememberMe = () => _remove(REMEMBER_KEY)
 // ── 跳登录 ─────────────────────────────────────────────────────
 function _toLogin(querys) {
   const tail = querys ? "?" + new URLSearchParams(querys).toString() : ""
-  window.location.assign("/login" + tail)
+  window.location.assign("/login/" + tail)
 }
 export const toLogin = debounce(_toLogin, 200)
 
