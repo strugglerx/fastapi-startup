@@ -35,6 +35,7 @@ export default defineConfig({
       "/docs":        backendTarget,
       "/openapi.json": backendTarget,
       "/doc":         backendTarget,
+      "/uploads":     backendTarget,
     },
   },
 

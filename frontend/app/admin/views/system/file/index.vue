@@ -40,12 +40,82 @@
         @update:page-size="onPageSizeChange"
       />
     </div>
+
+    <!-- 文件预览 Modal -->
+    <n-modal
+      v-model:show="showPreview"
+      preset="card"
+      :title="`文件预览 - ${previewFile.filename}`"
+      style="width: 800px; max-width: 95vw;"
+      class="file-preview-modal"
+      @after-leave="handlePreviewClose"
+    >
+      <div class="preview-content-wrapper">
+        <n-spin :show="loadingText">
+          <!-- 1. 图片预览 -->
+          <div v-if="previewType === 'image'" class="preview-image-box">
+            <n-image :src="previewFile.url" object-fit="contain" style="max-height: 60vh; width: 100%; display: block;" />
+          </div>
+
+          <!-- 2. PDF 预览 -->
+          <div v-else-if="previewType === 'pdf'" class="preview-iframe-box">
+            <iframe :src="previewFile.url" class="preview-iframe"></iframe>
+          </div>
+
+          <!-- 3. 视频预览 -->
+          <div v-else-if="previewType === 'video'" class="preview-media-box">
+            <video :src="previewFile.url" controls class="preview-video" autoplay></video>
+          </div>
+
+          <!-- 4. 音频预览 -->
+          <div v-else-if="previewType === 'audio'" class="preview-media-box audio-preview">
+            <div class="audio-card">
+              <div class="audio-icon">🎵</div>
+              <audio :src="previewFile.url" controls class="preview-audio" autoplay></audio>
+            </div>
+          </div>
+
+          <!-- 5. 文本预览 -->
+          <div v-else-if="previewType === 'text'" class="preview-text-box">
+            <pre class="preview-pre">{{ textContent }}</pre>
+          </div>
+
+          <!-- 6. Office 预览 -->
+          <div v-else-if="previewType === 'office'" class="preview-office-box">
+            <div class="office-fallback-card">
+              <div class="office-icon" :class="officeClass">📄</div>
+              <div class="office-filename">{{ previewFile.filename }}</div>
+              <div class="office-size">大小: {{ formatBytes(previewFile.file_size) }}</div>
+              <n-space justify="center" style="margin-top: 16px;">
+                <n-button type="primary" @click="downloadFile(previewFile)">下载并查看</n-button>
+                <n-button secondary @click="toggleOfficeOnline">
+                  {{ showOfficeOnline ? '关闭网页预览' : '使用 Office Online 预览' }}
+                </n-button>
+              </n-space>
+              <div v-if="showOfficeOnline" class="office-online-container">
+                <iframe :src="officeOnlineUrl" class="preview-iframe"></iframe>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. 其他不支持预览的文件 -->
+          <div v-else class="preview-unsupported-box">
+            <div class="unsupported-card">
+              <div class="unsupported-icon">📥</div>
+              <div class="unsupported-filename">{{ previewFile.filename }}</div>
+              <div class="unsupported-desc">该文件类型不支持在线预览</div>
+              <n-button type="primary" style="margin-top: 16px;" @click="downloadFile(previewFile)">下载文件</n-button>
+            </div>
+          </div>
+        </n-spin>
+      </div>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { computed, h, onMounted, reactive, ref } from "vue"
-import { NButton, NDataTable, NImage, NInput, NSpace, NTag, NUpload, useDialog, useMessage } from "naive-ui"
+import { NButton, NDataTable, NImage, NInput, NSpace, NTag, NUpload, NSpin, useDialog, useMessage } from "naive-ui"
 import AdminPageHeader from "../../../components/AdminPageHeader.vue"
 import { fileApi } from "../../../api/file.js"
 import { getToken } from "../../../api/base.js"
@@ -57,6 +127,108 @@ const message = useMessage()
 const dialog = useDialog()
 const loading = ref(false)
 const rows = ref([])
+
+// 预览相关状态
+const showPreview = ref(false)
+const previewFile = ref({})
+const showOfficeOnline = ref(false)
+const textContent = ref("")
+const loadingText = ref(false)
+
+const previewType = computed(() => {
+  const file = previewFile.value
+  if (!file || !file.filename) return "download"
+  
+  const ext = file.filename.split(".").pop().toLowerCase()
+  const mime = file.mime_type || ""
+  
+  if (mime.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"].includes(ext)) {
+    return "image"
+  }
+  if (mime === "application/pdf" || ext === "pdf") {
+    return "pdf"
+  }
+  if (mime.startsWith("video/") || ["mp4", "webm", "ogg", "mkv"].includes(ext)) {
+    return "video"
+  }
+  if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "wma"].includes(ext)) {
+    return "audio"
+  }
+  if (mime.startsWith("text/") || ["txt", "json", "md", "js", "html", "css", "xml", "py", "sh"].includes(ext)) {
+    return "text"
+  }
+  if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
+    return "office"
+  }
+  return "download"
+})
+
+const officeClass = computed(() => {
+  const file = previewFile.value
+  if (!file || !file.filename) return ""
+  const ext = file.filename.split(".").pop().toLowerCase()
+  if (["doc", "docx"].includes(ext)) return "word"
+  if (["xls", "xlsx"].includes(ext)) return "excel"
+  if (["ppt", "pptx"].includes(ext)) return "ppt"
+  return ""
+})
+
+const officeOnlineUrl = computed(() => {
+  const file = previewFile.value
+  if (!file || !file.url) return ""
+  let fileUrl = file.url
+  if (fileUrl.startsWith("/")) {
+    fileUrl = window.location.origin + fileUrl
+  }
+  return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}`
+})
+
+function toggleOfficeOnline() {
+  showOfficeOnline.value = !showOfficeOnline.value
+}
+
+async function fetchTextContent(url) {
+  loadingText.value = true
+  textContent.value = ""
+  try {
+    const response = await fetch(url)
+    if (response.ok) {
+      textContent.value = await response.text()
+    } else {
+      textContent.value = "无法加载文本内容"
+    }
+  } catch (e) {
+    textContent.value = `加载文本失败: ${e.message}`
+  } finally {
+    loadingText.value = false
+  }
+}
+
+function handlePreview(row) {
+  previewFile.value = row
+  showOfficeOnline.value = false
+  showPreview.value = true
+  
+  if (previewType.value === "text") {
+    fetchTextContent(row.url)
+  }
+}
+
+function handlePreviewClose() {
+  previewFile.value = {}
+  textContent.value = ""
+  showOfficeOnline.value = false
+}
+
+function downloadFile(file) {
+  const link = document.createElement("a")
+  link.href = file.url
+  link.download = file.filename
+  link.target = "_blank"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 
 const uploadHeaders = computed(() => {
   const token = getToken()
@@ -82,7 +254,7 @@ const columns = [
     width: 80,
   },
   {
-    title: "预览",
+    title: "缩略图",
     key: "preview",
     width: 90,
     render(row) {
@@ -146,14 +318,24 @@ const columns = [
   {
     title: "操作",
     key: "actions",
-    width: 100,
+    width: 150,
     render(row) {
-      return h(NButton, {
-        type: "error",
-        size: "small",
-        quaternary: true,
-        onClick: () => confirmDelete(row)
-      }, { default: () => "删除" })
+      return h(NSpace, { size: 6 }, {
+        default: () => [
+          h(NButton, {
+            type: "primary",
+            size: "small",
+            quaternary: true,
+            onClick: () => handlePreview(row)
+          }, { default: () => "预览" }),
+          h(NButton, {
+            type: "error",
+            size: "small",
+            quaternary: true,
+            onClick: () => confirmDelete(row)
+          }, { default: () => "删除" })
+        ]
+      })
     }
   }
 ]
@@ -352,5 +534,138 @@ onMounted(() => {
 
 .file-uploader {
   display: inline-block;
+}
+
+/* 预览相关样式 */
+.preview-content-wrapper {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-image-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.preview-iframe-box {
+  height: 60vh;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.preview-media-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0f172a;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.preview-video {
+  max-width: 100%;
+  max-height: 60vh;
+  outline: none;
+}
+
+.audio-preview {
+  background: #f1f5f9;
+  padding: 32px;
+}
+
+.audio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.audio-icon {
+  font-size: 48px;
+}
+
+.preview-audio {
+  width: 320px;
+}
+
+.preview-text-box {
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.preview-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.preview-office-box,
+.preview-unsupported-box {
+  padding: 24px;
+}
+
+.office-fallback-card,
+.unsupported-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.office-icon,
+.unsupported-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+
+.office-filename,
+.unsupported-filename {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.office-size,
+.unsupported-desc {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.office-online-container {
+  width: 100%;
+  height: 50vh;
+  margin-top: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+:global(.file-preview-modal) {
+  width: min(800px, calc(100vw - 32px));
 }
 </style>

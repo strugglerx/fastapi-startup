@@ -23,7 +23,20 @@ export function hasPermission(permission) {
       return false
     }
     
-    return user.permissions.includes(permission)
+    // 支持权限等级继承：如校验 system:admin:create，若用户已授权主菜单 system:admin 即可通过
+    if (user.permissions.includes(permission)) {
+      return true
+    }
+    
+    if (permission.includes(":")) {
+      const parts = permission.split(":")
+      const parentPermission = parts.slice(0, -1).join(":")
+      if (user.permissions.includes(parentPermission)) {
+        return true
+      }
+    }
+    
+    return false
   } catch (e) {
     console.error("[auth] hasPermission error:", e)
     return false

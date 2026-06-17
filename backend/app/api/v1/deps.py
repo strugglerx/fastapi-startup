@@ -180,12 +180,18 @@ def require_permission(permission: str):
         if is_admin(current_user):
             return current_user
         
+        # 权限校验继承逻辑：如果校验 system:admin:create，用户拥有主菜单 system:admin 即可
+        keys_to_check = [permission]
+        if ":" in permission:
+            parts = permission.split(":")
+            keys_to_check.append(":".join(parts[:-1]))
+        
         # 延迟导入，防止循环依赖
         from app.db import SysRoleMenu
         with SessionLocal() as db:
             has_grant = db.query(SysRoleMenu).filter(
                 SysRoleMenu.role == current_user.role,
-                SysRoleMenu.menu_key == permission
+                SysRoleMenu.menu_key.in_(keys_to_check)
             ).first()
             if not has_grant:
                 raise APIException(msg=f"权限不足，需要权限: {permission}", code=403)
