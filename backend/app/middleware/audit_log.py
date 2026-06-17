@@ -2,6 +2,7 @@ import json
 import time
 import asyncio
 import httpx
+from typing import Optional
 from fastapi import FastAPI, Request
 from anyio.to_thread import run_sync
 from app.db import SessionLocal, SysAuditLog
@@ -42,7 +43,7 @@ def _mask_sensitive_in_obj(obj):
     return obj
 
 
-def scrub_request_body(body_bytes: bytes, path: str) -> str | None:
+def scrub_request_body(body_bytes: bytes, path: str) -> Optional[str]:
     """把 body_bytes 转成可入库的字符串，敏感字段已脱敏。
     - JSON 字典 → 递归 mask
     - 非 JSON 且命中敏感路径 → 整体 "[REDACTED]"

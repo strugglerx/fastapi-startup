@@ -1,569 +1,215 @@
-[English](./README.md) | 中文简体 | [更新日志](./CHANGELOG.md)
+# FastAPI + Vue3 Naive UI 管理后台脚手架 (smart-ai)
 
-# FastAPI Base Scaffold
+[English](./README.md) | **中文简体** | [更新日志](./CHANGELOG.md)
 
-一款专为 AI 辅助开发设计的企业级 FastAPI 后端脚手架。结构严谨、规范统一，特别适合 AI Agent 自动编写和扩展 Python 接口。
-
-## ✨ 核心特性
-
-- 🚀 **FastAPI 0.115** - 现代化的高性能 Web 框架
-- 🤖 **AI 原生优化** - 目录结构与规范经过优化，AI Agent 可精准定位并自动编写业务逻辑
-- 🔐 **JWT 认证** - 完整的用户认证体系
-- 🗄️ **双数据库支持** - 智能切换 MySQL/SQLite（基于环境），启动时自动检测增量迁移数据表，无需手写迁移
-- ⚡ **Redis 缓存** - 高性能 L2 缓存、限流器与轻量级任务队列
-- 🛡️ **接口限流防护** - 分布式 `RateLimiter` 依赖拦截（如一分钟 10 次密码尝试等敏感操作防暴破）
-- 📋 **操作审计与 IP 缓存** - 异步记录用户增删改等关键写操作审计日志，并结合 L1(内存)+L2(Redis) 缓存自动解析 IP 归属地
-- 🗂️ **统一文件 & 数据字典** - 本地 MD5 去重秒传文件服务 + 多级字典联动配置管理
-- 🎨 **高效 ProTable 封装** - 前端 Naive UI 列表 CRUD 统一高阶封装，支持全配置化 Schema 渲染搜索、列表及表单
-- 🐳 **Docker 统一容器化** - 提供根目录下的多阶段构建 `Dockerfile` 及一键部署 `App + MySQL + Redis` 的 `docker-compose.yml`
-- 🌏 **时区一致性** - 后端 Python、MySQL 数据与前端展示统一使用 Asia/Shanghai (UTC+8) 时区
-
-
-## 📁 项目结构
-
-```
-.
-├── backend/                    # 后端目录
-│   ├── app/
-│   │   ├── api/               # API 路由层
-│   │   │   ├── public/        # 公开接口（无需认证）
-│   │   │   └── v1/            # API v1 版本
-│   │   │       ├── deps.py    # 依赖注入（认证、权限）
-│   │   │       └── hello.py   # 示例接口
-│   │   ├── boot/              # 应用启动配置
-│   │   │   ├── application.py # 应用工厂 + lifespan 生命周期
-│   │   │   ├── config.py      # 配置管理（Pydantic Settings）
-│   │   │   ├── logger.py      # 日志配置
-│   │   │   ├── plugins.py     # 框架插件（CORS、响应包装、异常处理）
-│   │   │   ├── exceptions.py  # 自定义异常
-│   │   │   ├── doc.py         # API 文档配置
-│   │   │   ├── openapi.py     # OpenAPI x-tagGroups 自定义
-│   │   │   └── static.py      # 静态文件服务
-│   │   ├── core/              # 核心功能模块
-│   │   │   ├── jwt.py         # JWT 工具（加密、解密、验证）
-│   │   │   ├── redis_pool.py  # Redis 连接池
-│   │   │   ├── limiter.py     # API 限流器
-│   │   │   ├── security.py    # 安全工具（密码加密等）
-│   │   │   └── sync_task_limiter.py # 同步任务限流
-│   │   ├── db/                # 数据库层
-│   │   │   ├── __init__.py    # 数据库引擎初始化
-│   │   │   ├── models.py      # 数据模型（User、AccessKey）
-│   │   │   ├── mysql.py       # MySQL 连接
-│   │   │   └── sqlite.py      # SQLite 连接
-│   │   ├── library/           # 工具库
-│   │   │   ├── debug/         # 调试工具（路由导出等）
-│   │   │   ├── json/          # JSON 工具
-│   │   │   ├── queue/         # 队列工具
-│   │   │   ├── schema/        # Schema 验证
-│   │   │   └── url/           # URL 工具
-│   │   ├── schema/            # Pydantic 数据模型
-│   │   ├── middleware/        # 自定义中间件
-│   │   └── main.py            # 应用入口
-│   ├── .env                   # 环境变量配置
-│   ├── .env.example           # 环境变量示例
-│   ├── requirements.txt       # Python 依赖
-│   ├── Dockerfile             # Docker 配置
-│   ├── docker-compose.yml     # Docker Compose 配置
-│   └── .gitignore             # Git 忽略文件
-├── tests/                     # 测试目录
-├── Makefile                   # 项目管理工具
-└── README.md                  # 项目文档
-```
-
-## 🚀 快速开始
-
-### 方式一：使用 Makefile（推荐）
-
-```bash
-# 1. 安装所有依赖
-make install
-
-# 2. 启动后端服务
-make run-api
-
-# 3. 启动前端服务（另一个终端）
-make run-front
-```
-
-### 方式二：手动安装
-
-```bash
-# 1. 创建虚拟环境
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 2. 安装依赖
-pip install -r requirements.txt
-
-# 3. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，配置数据库、Redis 等
-
-# 4. 启动服务
-uvicorn app.main:app --reload --port 8000
-```
-
-## ⚙️ 配置说明
-
-### 环境变量配置（`.env`）
-
-```bash
-# ============================================
-# 应用配置
-# ============================================
-APP_ENV=development          # 环境：development/production
-APP_DEBUG=true              # 调试模式
-APP_CORS_ORIGINS=*          # CORS 允许的源（逗号分隔）
-APP_ENABLE_GZIP=true        # 启用 Gzip 压缩
-
-# ============================================
-# 数据库配置
-# ============================================
-# 开发环境自动使用 SQLite (app/data/sqlite.db)
-# 生产环境 (APP_ENV=production) 使用 MySQL，需配置以下参数：
-
-# DB_USER=root
-# DB_PASSWORD=your_database_password
-# DB_HOST=localhost
-# DB_PORT=3306
-# DB_NAME=fastapi_scaffold
-
-# ============================================
-# Redis 配置
-# ============================================
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# ============================================
-# JWT 配置
-# ============================================
-JWT_SECRET_KEY=your_jwt_secret_key_here_please_change
-JWT_EXPIRE_MINUTES=480
-```
-
-### 数据库切换逻辑
-
-```python
-# 通过 APP_ENV 环境变量自动切换
-if APP_ENV == "production":
-    使用 MySQL  # 需要配置 DB_USER、DB_PASSWORD 等
-else:
-    使用 SQLite  # 默认路径：backend/app/data/sqlite.db
-```
-
-## 📚 核心功能详解
-
-### 1. 统一响应格式
-
-所有 API 响应自动包装为统一格式：
-
-```json
-// 成功响应
-{
-  "code": 0,
-  "data": {
-    "message": "Hello World"
-  }
-}
-
-// 错误响应
-{
-  "code": 1,
-  "msg": "错误信息"
-}
-```
-
-**特点：**
-- ✅ 自动包装，无需手动返回标准格式
-- ✅ 智能检测，避免重复包装
-- ✅ 支持流式响应（StreamingResponse）
-- ✅ 友好的中文错误提示
-
-### 2. 自定义异常处理
-
-```python
-from app.boot.exceptions import APIException
-
-# 抛出业务异常
-raise APIException(msg="用户不存在", code=404)
-
-# 返回格式
-{
-  "code": 404,
-  "msg": "用户不存在"
-}
-```
-
-### 3. JWT 认证
-
-```python
-from fastapi import Depends
-from app.api.v1.deps import get_current_user
-
-@router.get("/protected")
-async def protected_route(current_user = Depends(get_current_user)):
-    return {"user": current_user.username}
-```
-
-**认证流程：**
-1. 登录获取 Token
-2. 请求头携带 `Authorization: Bearer <token>`
-3. 自动验证并注入 `current_user`
-
-### 4. Redis 缓存
-
-```python
-from app.core.redis_pool import RedisPool
-
-redis = RedisPool.get_redis()
-redis.set("key", "value", ex=3600)  # 设置 1 小时过期
-value = redis.get("key")
-
-# 异步用法
-redis_async = await RedisPool.get_async_redis()
-await redis_async.set("k", "v")
-```
-
-### 5. API 限流（基于 AccessKey 的动态 IP 限流）
-
-```python
-from fastapi import Request
-from app.core.limiter import get_rate_limiter
-
-@router.get("/api")
-async def limited_api(request: Request):
-    get_rate_limiter().enforce(request)
-    # 限速值来自 AccessKey.max_qps，按密钥独立配置
-    return {"status": "ok"}
-```
-
-客户端请求头需带 `X-Access-Key: <secret>`；限流器使用 Redis 缓存密钥信息（60 秒），通过原子 Lua 脚本 INCR+EXPIRE 做每 IP 限速。
-
-## 🔧 Makefile 命令
-
-```bash
-# 安装依赖
-make install              # 安装所有依赖（后端 + 前端）
-make venv                 # 创建 Python 虚拟环境
-make frontend-deps        # 安装前端依赖
-
-# 运行服务
-make run-api              # 启动 FastAPI 后端（自动清理端口）
-make stop-api             # 停止 FastAPI 后端
-make run-front            # 启动 Vue 前端
-
-# 测试
-make test                 # 运行所有测试
-make test-verbose         # 运行测试并显示详细输出
-
-# 构建和清理
-make build                # 构建前端生产包
-make clean                # 清理临时文件
-```
-
-## 📖 API 文档
-
-启动服务后访问：
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **RapiDoc**: http://localhost:8000/rapidoc
-
-### 示例接口
-
-| 接口 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| Hello World | GET | `/api/v1/hello` | 示例接口 |
-| 健康检查 | GET | `/api/v1/ping` | 系统健康状态 |
-
-测试接口：
-
-```bash
-curl http://localhost:8000/api/v1/hello
-```
-
-返回：
-
-```json
-{
-  "code": 0,
-  "data": {
-    "message": "Hello, base scaffold!",
-    "status": "success",
-    "version": "1.0.0",
-    "docs": "/docs"
-  }
-}
-```
-
-## 🧪 测试
-
-使用 pytest 进行测试：
-
-```bash
-# 运行所有测试
-python -m pytest tests/
-
-# 运行测试并显示详细输出
-python -m pytest tests/ -v
-
-# 运行特定测试文件
-python -m pytest tests/test_hello.py
-
-# 运行测试并显示覆盖率
-python -m pytest tests/ --cov=app --cov-report=html
-```
-
-**测试文件示例：**
-
-```python
-# tests/test_hello.py
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
-
-def test_hello_world():
-    response = client.get("/api/v1/hello")
-    assert response.status_code == 200
-    assert response.json()["code"] == 200
-    assert "message" in response.json()["data"]
-```
-
-## 🔨 如何添加新接口
-
-### 1. 创建路由文件
-
-```python
-# backend/app/api/v1/users.py
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/users", tags=["用户管理"])
-
-@router.get("/")
-async def get_users():
-    return {"users": []}
-
-@router.post("/")
-async def create_user(username: str):
-    return {"id": 1, "username": username}
-```
-
-### 2. 注册路由
-
-```python
-# backend/app/api/v1/__init__.py
-from fastapi import APIRouter
-from . import hello, users  # 导入新模块
-
-router = APIRouter(prefix="/api/v1")
-
-router.include_router(hello.router)
-router.include_router(users.router)  # 注册新路由
-```
-
-### 3. 访问接口
-
-- http://localhost:8000/api/v1/users
-- 自动出现在 `/docs` 文档中
-
-## 🗄️ 数据模型
-
-### User（用户）
-
-```python
-- id: 主键
-- username: 用户名（唯一）
-- hashed_password: 加密密码
-- last_login: 最后登录时间
-- fixed: 是否为管理员
-- created_at / updated_at: 时间戳
-```
-
-### AccessKey（访问密钥）
-
-```python
-- id: 主键
-- secret_key: 密钥内容（唯一）
-- description: 密钥描述
-- max_qps: 最大 QPS 限制
-- created_by: 创建用户 ID
-- created_at / updated_at: 时间戳
-```
-
-## 🐳 Docker 部署
-
-### 构建镜像
-
-```bash
-cd backend
-docker build -t fastapi-scaffold .
-```
-
-### 运行容器
-
-```bash
-docker run -d \
-  --name fastapi-app \
-  -p 8000:8000 \
-  -e APP_ENV=production \
-  -e DB_HOST=your_mysql_host \
-  -e DB_PASSWORD=your_password \
-  fastapi-scaffold
-```
-
-# Docker Compose（推荐）
-
-使用 `docker-compose.yml` 快速启动完整环境：
-
-```bash
-# 启动所有服务（API、MySQL、Redis）
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f api
-
-# 停止服务
-docker-compose down
-
-# 停止并删除数据卷
-docker-compose down -v
-```
-
-**docker-compose.yml 配置说明：**
-- **api**: FastAPI 应用服务，端口 8000
-- **mysql**: MySQL 8.0 数据库，端口 3306，root 密码 `root123`
-- **redis**: Redis 缓存服务，端口 6379
-
-**健康检查：**
-- 服务启动后会自动进行健康检查
-- 数据库初始化需要等待 10-30 秒
-- 可使用 `docker-compose ps` 查看服务状态
-
-## 📝 开发规范
-
-### 代码风格
-
-- 遵循 **PEP 8** 规范
-- 使用 **类型注解**（Type Hints）
-- 编写清晰的函数和变量名称
-- 添加必要的注释和文档字符串
-
-### 提交规范
-
-```
-feat: 新增功能
-fix: 修复 bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 重构
-test: 测试相关
-chore: 构建/工具相关
-```
-
-### 目录规范
-
-- `api/` - 只放路由定义，不写业务逻辑
-- `core/` - 核心功能，可复用的工具
-- `db/` - 数据库相关，模型定义
-- `library/` - 通用工具库
-- `schema/` - Pydantic 数据模型
-
-## 🎯 最佳实践
-
-### 1. 环境隔离
-
-```bash
-# 开发环境
-APP_ENV=development  # 使用 SQLite
-
-# 生产环境
-APP_ENV=production   # 使用 MySQL
-```
-
-### 2. 配置管理
-
-所有配置通过 `.env` 文件管理，不要硬编码：
-
-```python
-# ❌ 不推荐
-db_host = "localhost"
-
-# ✅ 推荐
-from app.boot import settings
-db_host = settings.database.host
-```
-
-### 3. 异常处理
-
-使用自定义异常，提供友好提示：
-
-```python
-# ❌ 不推荐
-raise Exception("error")
-
-# ✅ 推荐
-raise APIException(msg="用户名已存在", code=400)
-```
-
-### 4. 日志记录
-
-```python
-from app.boot import logger
-
-logger.info("用户登录成功")
-logger.error("数据库连接失败", exc_info=True)
-```
-
-## 🔍 常见问题
-
-### Q: 如何切换数据库？
-
-A: 修改 `.env` 中的 `APP_ENV`：
-- `development` → SQLite
-- `production` → MySQL
-
-### Q: 端口被占用怎么办？
-
-A: 使用 `make run-api` 会自动清理 8000 端口
-
-### Q: 如何禁用响应自动包装？
-
-A: 在中间件中添加路径到跳过列表：
-
-```python
-# backend/app/boot/plugins.py
-if any(request.url.path.startswith(p) for p in ("/docs", "/your-path")):
-    return response
-```
-
-### Q: 如何添加新的配置项？
-
-A: 在 `backend/app/boot/config.py` 中添加：
-
-```python
-class AppConfig(BaseSettings):
-    new_config: str = Field(default="value", validation_alias="NEW_CONFIG")
-```
-
-然后在 `.env` 中配置：
-
-```bash
-NEW_CONFIG=your_value
-```
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 License
-
-MIT License
+一款专为极速开发与 AI 辅助开发设计的企业级前后端分离管理后台脚手架。后端基于 **FastAPI**，前端基于 **Vue 3 + Naive UI + TailwindCSS**，开箱即用，代码精简规范，易于二次扩展。
 
 ---
 
-**祝你使用愉快！如有问题欢迎提 Issue 🎉**
+## ⚡ 核心特性
+
+### 1. ⚙️ 后端特性 (FastAPI)
+- **高性能框架**：基于 **FastAPI 0.115**，原生支持异步协程，极致的响应速度。
+- **智能表结构自动迁移**：无需手动编写复杂的 Alembic 迁移脚本。只需在 `models.py` 中定义或追加字段，应用启动时底层自动执行 `Base.metadata.create_all()` 并通过 `auto_migrate_columns` 差量追加新字段。
+- **原子级接口限流 (Rate Limiter)**：内置基于 Redis 令牌桶算法的分布式限流拦截器，可针对单个接口进行细粒度调用限制。
+- **全方位操作审计**：集成操作日志拦截中间件，自动拦截 `POST/PUT/PATCH/DELETE` 写入操作，**自动识别敏感字段并脱敏**。
+- **IP 归属地双重缓存**：结合 L1 本地内存缓存与 L2 Redis 缓存，自动解析并缓存操作 IP 的地理位置。
+- **双数据库灵活切**：开发环境默认自动使用 SQLite，生产环境无缝切换至 MySQL。
+
+### 2. 🎨 前端特性 (Vue3 + Naive UI)
+- **高阶 CRUD 提效组件 (ProTable)**：封装了极强表现力的 [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue) 统一列表页面。仅需配置 JSON Schema，即可自动完成：**表格渲染、表单弹窗、分页切换、条件检索、多重按钮权限绑定**。
+- **动态菜单与权限闭环**：
+  - **页面访问隔离**：登录后动态请求 `/api/menu/list` 获取当前用户角色有权访问的菜单，前端据此**动态构建路由表**并挂载，无权限路径直接回退 404。
+  - **按钮级控制**：全局封装 `v-auth` 自定义指令及 `hasPermission()` 方法，对未授权按钮进行无占位隐藏。
+- **主题化系统与现代审美**：深度整合 Naive UI 的配置系统，全面兼容 Dark Mode（暗黑模式），配合 TailwindCSS 提供顺滑流畅的微交互动效。
+
+### 3. 💼 开箱即用业务功能
+- **账号管理**：支持管理员账号创建、禁用、重置密码及角色分配。
+- **角色管理**：支持角色组定义与图形化菜单权限勾选授予。
+- **菜单管理**：内置代码级路由声明同步机制（支持扫描 `page.js` 快速上报菜单至数据库）。
+- **文件中心**：本地化静态文件服务，支持 **MD5 极速去重秒传**。
+- **数据字典**：全动态多级联动数据字典配置。
+
+---
+
+## 📁 目录结构
+
+```
+.
+├── backend/                    # 后端项目 (FastAPI)
+│   ├── app/
+│   │   ├── api/               # 路由层 (public 公开 / v1 业务接口)
+│   │   │   └── v1/deps.py     # 共享依赖注入项 (JWT验证、权限、限流)
+│   │   ├── boot/              # 应用工厂与生命周期插件加载
+│   │   ├── core/              # JWT、Redis 连接池、限流、安全算法、队列任务
+│   │   ├── db/                # 数据库模型 (models.py) 与数据库切换引擎
+│   │   ├── middleware/        # 审计日志、访问拦截中间件
+│   │   └── main.py            # 后端主入口
+│   ├── .env                   # 本地环境变量配置
+│   └── requirements.txt       # 后端依赖声明
+│
+├── frontend/                   # 前端项目 (Vue 3)
+│   ├── app/
+│   │   ├── admin/             # 管理员系统核心
+│   │   │   ├── api/           # 请求封装与接口定义
+│   │   │   ├── components/    # 通用组件 (ProTable.vue 核心位于此)
+│   │   │   ├── router/        # 路由定义与动态路由加载
+│   │   │   ├── stores/        # Pinia 状态管理
+│   │   │   └── views/         # 页面视图 (dashboard/error/system等)
+│   │   └── login/             # 独立登录页应用
+│   ├── vite.config.js         # Vite 配置文件
+│   └── tailwind.config.js     # Tailwind 样式配置
+│
+├── Makefile                   # 极速开发运维命令行助手
+└── docker-compose.yml         # 生产一键打包容器编排
+```
+
+---
+
+## 🚀 快速启动
+
+### 方式一：使用 Makefile (强烈推荐)
+
+系统根目录下准备了快捷 `Makefile` 命令：
+
+```bash
+# 1. 安装前后端所有依赖 (需提前准备 python3、pnpm)
+make install
+
+# 2. 启动 FastAPI 后端服务器 (默认占用 8000 端口，含自动热重载)
+make run-api
+
+# 3. 启动 Vue 前端服务 (在另一个终端中，默认占用 5173 端口)
+make run-front
+```
+
+### 方式二：手动启动
+
+#### 1. 启动后端 (Backend)
+```bash
+cd backend
+# 创建并激活虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 安装依赖项
+pip install -r requirements.txt
+
+# 复制并配置环境变量
+cp .env.example .env
+
+# 启动开发服务器
+uvicorn app.main:app --reload --port 8000
+```
+
+#### 2. 启动前端 (Frontend)
+```bash
+cd frontend
+# 安装依赖
+pnpm install
+
+# 启动开发服务器
+pnpm run dev
+```
+
+启动完成后：
+- 后端 API 文档：[http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI) / [ReDoc](http://localhost:8000/redoc)
+- 前端管理后台：[http://localhost:5173](http://localhost:5173)
+
+---
+
+## 📚 开发者指南 (HOW-TO)
+
+### 1. 新增业务模块流程
+要在系统里新增一个带有增删改查的业务页，只需遵循以下流程：
+
+#### 第一步：设计数据库表 (backend)
+在 [backend/app/db/models.py](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/backend/app/db/models.py) 中新增实体模型：
+```python
+class SysProduct(Base):
+    __tablename__ = "sys_product"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(64), nullable=False, comment="产品名称")
+    price = Column(Numeric(10, 2), default=0.00, comment="单价")
+    status = Column(Integer, default=1, comment="状态 1启用 0禁用")
+```
+> [!NOTE]
+> 保存并重启后端，系统会自动识别该表并同步建表，无需编写 sql 或执行迁移命令。
+
+#### 第二步：编写 CRUD API 接口 (backend)
+在 `backend/app/api/v1/` 下新建对应路由文件（可挂载 `require_permission` 依赖）：
+```python
+from fastapi import APIRouter, Depends
+from app.api.v1.deps import require_permission
+
+router = APIRouter(prefix="/products", tags=["产品管理"])
+
+@router.get("", dependencies=[Depends(require_permission("system:product:list"))])
+async def list_products():
+    ...
+```
+
+#### 第三步：在前端添加视图文件并定义 `page.js` (frontend)
+在 `frontend/app/admin/views/` 下创建页面目录，并在此目录下声明一个 [page.js](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/views/system/admin/page.js) 文件用于描述路由元数据：
+```javascript
+export default {
+  title: '产品管理',
+  icon: 'LayersOutline',
+  order: 99,
+  permissions: ['system:product:list', 'system:product:create', 'system:product:update', 'system:product:delete']
+}
+```
+
+#### 第四步：同步菜单并分配权限 (管理后台)
+1. 登录管理后台，进入 **「系统设置」** 页面。
+2. 点击 **「一键同步菜单」**，前台会自动扫描所有的 `page.js` 页面并将新增菜单上传至数据库表 `sys_menu`。
+3. 进入 **「角色管理」**，为您当前所属的角色勾选刚才新增的产品菜单及按钮权限。
+4. 刷新页面，新菜单即会自动呈现在侧边栏中。
+
+---
+
+### 2. 使用 `ProTable` 极速完成列表页
+在前端视图的 `index.vue` 中，可以直接引入 [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue) 组件，仅传入 schema 即可自动渲染完整的增删改查页：
+
+```html
+<template>
+  <pro-table
+    title="产品管理"
+    api-path="/api/v1/products"
+    permission-prefix="system:product"
+    :columns="columns"
+    :form-schema="formSchema"
+  />
+</template>
+
+<script setup>
+const columns = [
+  { title: "产品名称", key: "name", search: true },
+  { title: "产品价格", key: "price" },
+  { title: "产品状态", key: "status", render: (row) => row.status === 1 ? '启用' : '禁用' }
+]
+
+const formSchema = {
+  name: { label: "产品名称", type: "input", required: true },
+  price: { label: "产品价格", type: "number", required: true },
+  status: { label: "产品状态", type: "select", options: [{ label: "启用", value: 1 }, { label: "禁用", value: 0 }] }
+}
+</script>
+```
+
+---
+
+## 🛡️ 开发规范与提交标准
+
+项目遵循 Conventional Commits 提交规范，提交消息请严格符合以下格式：
+
+```
+feat: 新增产品批量导出功能
+fix: 修复 uvicorn 启动时 python 3.9 环境下的类型注解报错
+docs: 更新 README 文档有关 ProTable 的使用范例
+```
+
+---
+
+## 📄 开源许可证
+本项目采用 MIT 许可证开源。
