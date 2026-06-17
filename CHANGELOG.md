@@ -11,6 +11,12 @@
 
 ### 安全
 
+- **种子管理员凭证 env 化**（关键修复）：之前 `UserService` 里硬编码 `SEED_EMAIL = "admin@local"` / `SEED_USERNAME = "admin"` / `SEED_PASSWORD = "admin123"`，且 `boot/application.py` 启动 warning 日志会把明文密码打到 stdout/日志文件。GitGuardian/推送扫描会将其标为"hardcoded credential"，且任何人 clone 仓库即知道默认管理员口令。
+  - `boot/config.py` 新增 `SeedAdminConfig`，从 env 读取 `SEED_ADMIN_EMAIL` / `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`。
+  - `UserService.ensure_seed_admin` 改为：**`SEED_ADMIN_PASSWORD` 留空 → 跳过创建**（生产推荐），并返回 `skipped: True`；已存在的种子管理员仍照常补齐 role/fixed 字段。
+  - 启动 warning 日志不再打印明文密码，改为"密码来自 SEED_ADMIN_PASSWORD"提示；未配置时打一条"请设置 SEED_ADMIN_PASSWORD 或手工建号"的 warning。
+  - `.env.example` 新增三个变量并写明使用约定。
+
 - **审计日志脱敏**（关键修复）：之前 `audit_log` 中间件直接把请求体原文写入 `sys_audit_log.request_body`，导致 `/auth/login`、`/me/password`、`/auth/forgot-password` 等接口的密码 / 验证码 / token **明文落库**。
   - `middleware/audit_log.py` 新增 `scrub_request_body()`：JSON body 递归 mask `password / passwd / pwd / old_password / new_password / token / access_token / refresh_token / secret / code / authorization` 等键；非 JSON body 命中敏感路径直接 `[REDACTED]`；其他原文截断到 4000。
   - 启动时一次性 `AuditService.scrub_history()` 对历史 `request_body` 跑同样的脱敏；Redis 标记 `audit_scrub_done` 30 天，重启不会重复跑。

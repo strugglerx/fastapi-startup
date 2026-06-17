@@ -5,6 +5,7 @@ from typing import Optional
 from sqlalchemy import or_
 
 from app.boot import APIException, app_config, jwt_config, logger
+from app.boot.config import seed_admin_config
 from app.core.jwt import create_access_token
 from app.core.redis_pool import RedisPool
 from app.core.security import get_password_hash, validate_password_strength, verify_password
@@ -526,26 +527,35 @@ class UserService:
             return {"id": user_id, "deleted": True}
 
     # ──────────────────────────────────────────
-    # 启动 seed：保证至少有一个种子管理员
+    # 启动 seed：保证至少有一个种子管理员（凭证由 env 提供）
     # ──────────────────────────────────────────
-    SEED_EMAIL    = "admin@local"
-    SEED_USERNAME = "admin"
-    SEED_PASSWORD = "admin123"
+    @classmethod
+    def _seed_email(cls) -> str:
+        return seed_admin_config.email or "admin@local"
+
+    @classmethod
+    def _seed_username(cls) -> str:
+        return seed_admin_config.username or "admin"
 
     @classmethod
     def ensure_seed_admin(cls) -> dict:
-        """启动时 upsert 种子管理员：admin@local / admin123 / role=admin / fixed=True。
+        """启动时 upsert 种子管理员。
 
-        - 若已存在（按 email 或 username 命中）：补齐 role/fixed 字段，密码不动
-        - 若不存在：创建
-        返回 {"created": bool, "email": ...}
+        凭证全部来自 env（SEED_ADMIN_EMAIL / SEED_ADMIN_USERNAME / SEED_ADMIN_PASSWORD）。
+        - SEED_ADMIN_PASSWORD 未设置 → 跳过创建，避免在代码里硬编码默认密码被密钥扫描标红 / 被弱口令利用。
+        - 若管理员已存在：仅补齐 role/fixed/email 字段，密码不动。
+        - 若不存在且 env 已配置：用 env 凭证创建。
+        返回 {"created": bool, "email": ..., "skipped": bool}
         """
+        email    = cls._seed_email()
+        username = cls._seed_username()
+
         with SessionLocal() as db:
             existing = (
                 db.query(User)
                 .filter(
                     User.deleted_at.is_(None),
-                    or_(User.email == cls.SEED_EMAIL, User.username == cls.SEED_USERNAME),
+                    or_(User.email == email, User.username == username),
                 )
                 .first()
             )
@@ -556,22 +566,25 @@ class UserService:
                 if not existing.fixed:
                     existing.fixed = True;  changed = True
                 if not existing.email:
-                    existing.email = cls.SEED_EMAIL; changed = True
+                    existing.email = email; changed = True
                 if changed:
                     db.commit()
-                return {"created": False, "email": existing.email or cls.SEED_EMAIL}
+                return {"created": False, "skipped": False, "email": existing.email or email}
+
+            if not seed_admin_config.is_configured:
+                return {"created": False, "skipped": True, "email": email}
 
             u = User(
-                username=cls.SEED_USERNAME,
-                email=cls.SEED_EMAIL,
+                username=username,
+                email=email,
                 full_name="系统管理员",
                 role="admin",
                 fixed=True,
-                hashed_password=get_password_hash(cls.SEED_PASSWORD),
+                hashed_password=get_password_hash(seed_admin_config.password),
             )
             db.add(u)
             db.commit()
-            return {"created": True, "email": cls.SEED_EMAIL}
+            return {"created": True, "skipped": False, "email": email}
 
     # ──────────────────────────────────────────
     # 兼容：旧 list_users / delete_user（其它测试还在引用）

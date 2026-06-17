@@ -63,12 +63,30 @@ class MailConfig(_Base):
         return bool(self.host and self.sender)
 
 
+class SeedAdminConfig(_Base):
+    """种子管理员凭证——从环境变量读取，未配置则跳过创建。
+
+    安全约定：
+    - 不在仓库里硬编码默认密码（避免被密钥扫描标红 / 弱默认凭证利用）。
+    - SEED_ADMIN_PASSWORD 为空 → 启动时不创建种子管理员，需要运维手工建号。
+    - email / username 留空时回落到一组无害的本地默认值。
+    """
+    email:    str = Field(default="admin@local",  validation_alias="SEED_ADMIN_EMAIL")
+    username: str = Field(default="admin",        validation_alias="SEED_ADMIN_USERNAME")
+    password: str = Field(default="",             validation_alias="SEED_ADMIN_PASSWORD")
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.password)
+
+
 class Settings(_Base):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
     jwt: JwtConfig = Field(default_factory=JwtConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
+    seed_admin: SeedAdminConfig = Field(default_factory=SeedAdminConfig)
 
 
 def _find_env_file() -> Path:
@@ -100,6 +118,7 @@ except Exception as e:
         redis=RedisConfig.model_construct(),
         jwt=JwtConfig.model_construct(),
         mail=MailConfig.model_construct(),
+        seed_admin=SeedAdminConfig.model_construct(),
     )
 
 app_config = settings.app
@@ -107,6 +126,7 @@ database_config = settings.database
 redis_config = settings.redis
 jwt_config = settings.jwt
 mail_config = settings.mail
+seed_admin_config = settings.seed_admin
 
 # 启动概览（敏感信息脱敏）
 _app_env = os.getenv("APP_ENV", "development")
@@ -122,6 +142,7 @@ logger.info(f"  Redis      : {redis_config.host}:{redis_config.port} ({'有密�
 logger.info(f"  JWT        : {'⚠ 使用默认密钥（不安全，生产环境请修改）' if _jwt_default else '已配置'}, 过期 {jwt_config.expire_minutes} 分钟")
 logger.info(f"  CORS       : {app_config.cors_origins_list}")
 logger.info(f"  邮件       : {'已配置 (' + mail_config.host + ')' if mail_config.is_configured else '未配置（找回密码等邮件功能将提示暂不支持）'}")
+logger.info(f"  种子管理员 : {'已配置 (' + seed_admin_config.email + ')' if seed_admin_config.is_configured else '未配置（不会自动创建种子管理员，请手工建号或设置 SEED_ADMIN_PASSWORD）'}")
 logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 # 生产环境用默认 JWT 密钥时发警告，但不阻断启动

@@ -34,8 +34,13 @@ async def lifespan(app: FastAPI):
         r = UserService.ensure_seed_admin()
         if r.get("created"):
             logger.warning(
-                f"⚠ 已创建种子管理员 {UserService.SEED_EMAIL} / {UserService.SEED_PASSWORD}，"
+                f"⚠ 已创建种子管理员 {r.get('email')}（密码来自 SEED_ADMIN_PASSWORD），"
                 "请首次登录后立即改密"
+            )
+        elif r.get("skipped"):
+            logger.warning(
+                "⚠ 未配置 SEED_ADMIN_PASSWORD，跳过种子管理员创建。"
+                "请设置该环境变量后重启，或手工建号。"
             )
         else:
             logger.info(f"✓ 种子管理员已存在: {r.get('email')}")
