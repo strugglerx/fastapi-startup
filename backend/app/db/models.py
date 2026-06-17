@@ -116,3 +116,27 @@ class SysRole(Base):
     sort        = Column(Integer, nullable=False, default=0)
     created_at  = Column(DateTime, server_default=sa.func.now())
     updated_at  = Column(DateTime, server_default=sa.func.now(), onupdate=sa.func.now())
+
+
+class SysAuditLog(Base):
+    __tablename__ = "sys_audit_log"
+    __table_args__ = (
+        sa.Index("idx_audit_user_id", "user_id"),
+        sa.Index("idx_audit_created_at", "created_at"),
+        {"comment": "操作审计日志"},
+    )
+
+    id           = Column(BigInteger().with_variant(mysql.BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    user_id      = Column(Integer, nullable=True, comment="操作用户ID")
+    username     = Column(String(64), nullable=True, comment="操作用户名")
+    action       = Column(String(100), nullable=False, comment="操作动作编码")
+    description  = Column(String(255), nullable=True, comment="操作描述")
+    method       = Column(String(16), nullable=False, comment="请求方法")
+    path         = Column(String(255), nullable=False, comment="请求路径")
+    query_params = Column(Text, nullable=True, comment="查询参数")
+    request_body = Column(Text, nullable=True, comment="请求体参数")
+    status_code  = Column(Integer, nullable=False, comment="HTTP状态码")
+    ip_address   = Column(String(45), nullable=True, comment="IP地址")
+    user_agent   = Column(String(512), nullable=True, comment="浏览器UserAgent")
+    cost_time    = Column(Integer, nullable=False, comment="耗时(ms)")
+    created_at   = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)

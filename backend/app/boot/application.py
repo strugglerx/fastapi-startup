@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from .config import app_config
 from .plugins import setup_cors, setup_stand_response, setup_exception, setup_custom_server
-from app.middleware import setup_access_log
+from app.middleware import setup_access_log, setup_audit_log
 from .static import mount_static
 from .doc import setup_docs
 from .openapi import custom_openapi
@@ -78,6 +78,7 @@ def create_app() -> FastAPI:
     app.use(setup_exception)
     app.use(setup_docs)
     app.use(setup_custom_server)
+    app.use(setup_audit_log)
     app.use(setup_access_log)
     app.use(setup_cors)  # 最外层：先处理 OPTIONS / 跨域头
 

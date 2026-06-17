@@ -18,6 +18,7 @@ export * from "./base.js"
 
 export { authApi }         from "./auth.js"
 export { adminApi }        from "./admin.js"
+export { auditApi }        from "./audit.js"
 export *                   from "./menu.js"
 export *                   from "./role.js"
 
@@ -27,4 +28,5 @@ import { adminApi }        from "./admin.js"
 export default {
   auth:         authApi,
   admin:        adminApi,
+  audit:        auditApi,
 }

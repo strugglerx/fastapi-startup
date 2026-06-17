@@ -120,9 +120,10 @@ async def create_group(req: CreateGroupReq, _admin=Depends(require_admin)):
     )
 
 
-@router.delete("/{menu_key}", summary="删除 UI 分组")
-async def delete_group(menu_key: str, _admin=Depends(require_admin)):
-    return MenuService.delete_group(menu_key)
+@router.delete("/{id:int}", summary="删除菜单", dependencies=[Depends(require_admin)])
+async def delete_menu(id: int):
+    return MenuService.delete_menu(id)
+
 
 
 class MenuReq(BaseModel):
@@ -161,7 +162,5 @@ async def update_menu(id: int, req: MenuReq):
     return MenuService.update_menu(id, req.model_dump())
 
 
-@router.delete("/{id:int}", summary="删除菜单", dependencies=[Depends(require_admin)])
-async def delete_menu(id: int):
-    return MenuService.delete_menu(id)
+
 

@@ -30,10 +30,6 @@ export function createMenuGroup(payload) {
   return http.post("/api/menu/groups", payload).then((r) => r.data?.data ?? r.data)
 }
 
-export function deleteMenuGroup(menuKey) {
-  return http.delete(`/api/menu/${encodeURIComponent(menuKey)}`).then((r) => r.data?.data ?? r.data)
-}
-
 export function createMenu(body) {
   return http.post("/api/menu/", body).then((r) => r.data?.data ?? r.data)
 }

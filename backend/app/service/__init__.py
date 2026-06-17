@@ -13,9 +13,11 @@ Service 层 —— 业务逻辑编排
 from .role_service import RoleService
 from .user_service import UserService
 from .menu_service import MenuService
+from .audit_service import AuditService
 
 __all__ = [
     "MenuService",
     "RoleService",
     "UserService",
+    "AuditService",
 ]

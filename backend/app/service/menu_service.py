@@ -174,6 +174,12 @@ class MenuService:
             "parentKey": "g:system",
             "sort": 13,
         },
+        "system:audit": {
+            "title": "审计日志",
+            "icon": "FileText",
+            "parentKey": "g:system",
+            "sort": 14,
+        },
     }
 
     @classmethod
@@ -288,8 +294,8 @@ class MenuService:
                         hidden = False
 
                     # 默认情况下，新同步的页面（如新开发的页面）处于禁用状态，供管理员在菜单管理中自行配置并启用
-                    # 仅控制台（dashboard）作为根首页默认启用以确保有初始入口
-                    is_enabled = True if menu_key == "dashboard" else False
+                    # 仅控制台与核心内置菜单默认启用，以确保基础入口可用
+                    is_enabled = True if (menu_key == "dashboard" or menu_key in cls.DEFAULT_CORE_MENUS) else False
 
                     db.add(SysMenu(
                         menu_key=menu_key,
@@ -406,35 +412,6 @@ class MenuService:
             db.commit()
             db.refresh(row)
             return _menu_to_dict(row)
-
-    @classmethod
-    def delete_group(cls, menu_key: str) -> dict:
-        menu_key = (menu_key or "").strip()
-        if not menu_key:
-            raise APIException("menuKey 不能为空", code=61002, status_code=400)
-
-        with SessionLocal() as db:
-            row = db.query(SysMenu).filter(SysMenu.menu_key == menu_key).first()
-            if not row:
-                raise APIException("菜单项不存在", code=61009, status_code=404)
-            if row.source != "ui" or row.component != cls.GROUP_COMPONENT:
-                raise APIException("仅允许删除 UI 创建的分组", code=61013, status_code=400)
-
-            child_count = db.query(SysMenu).filter(
-                SysMenu.parent_key == menu_key,
-                SysMenu.enabled == True,  # noqa: E712
-            ).count()
-            if child_count:
-                raise APIException("请先迁移子节点", code=61014, status_code=400)
-
-            try:
-                db.query(SysRoleMenu).filter(SysRoleMenu.menu_key == menu_key).delete(synchronize_session=False)
-                db.delete(row)
-                db.commit()
-            except Exception:
-                db.rollback()
-                raise
-            return {"menuKey": menu_key, "success": True}
 
     @classmethod
     def ensure_source_migration(cls):
