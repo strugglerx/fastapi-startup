@@ -695,7 +695,14 @@ function renderLabel({ option }) {
         textDecoration: !isEnabled ? "line-through" : "none"
       }
     }, option.label),
-    isButton ? h(NTag, { size: "tiny", bordered: false, type: "warning", style: "margin-left: 6px" }, { default: () => option.raw.menuKey }) : null,
+    isButton ? h(NTag, {
+      size: "tiny",
+      bordered: false,
+      type: "warning",
+      class: "menu-button-pill",
+      style: "margin-left: 6px",
+      title: "点击编辑按钮权限",
+    }, { default: () => option.raw.menuKey }) : null,
     !isEnabled ? h(NTag, { size: "tiny", bordered: false, type: "error", style: "margin-left: 6px" }, { default: () => "禁用" }) : null,
     (isHidden && !isButton) ? h(NTag, { size: "tiny", bordered: false, type: "default", style: "margin-left: 6px" }, { default: () => "隐藏" }) : null,
   ])
@@ -713,6 +720,17 @@ function renderLabel({ option }) {
 .menu-tree-label svg {
   flex-shrink: 0;
   display: inline-block;
+}
+
+/* 按钮权限 pill：让"可点击编辑"的视觉更明显 */
+:deep(.menu-button-pill) {
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+:deep(.menu-button-pill:hover) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
 }
 
 .admin-page {

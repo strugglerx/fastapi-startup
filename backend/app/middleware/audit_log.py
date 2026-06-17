@@ -10,6 +10,61 @@ from app.core.redis_pool import RedisPool
 
 _SKIP_AUDIT_PREFIXES = ("/docs", "/openapi.json", "/redoc", "/doc/", "/health", "/favicon.ico")
 
+# 写库前要 mask 掉的请求体字段（不区分大小写）；任何包含这些子串的键都打码
+_SENSITIVE_KEYS = (
+    "password", "passwd", "pwd",
+    "old_password", "new_password", "confirm_password",
+    "token", "access_token", "refresh_token", "secret",
+    "code",  # 找回密码验证码
+    "authorization",
+)
+# 路径级保险：即便 JSON 解析失败也整体打码（防止某些请求结构异常时漏掉敏感字段）
+_REDACT_FULL_PATHS = (
+    "/api/v1/auth/login",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
+    "/api/v1/me/password",
+)
+
+
+def _mask_sensitive_in_obj(obj):
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            k_lower = str(k).lower()
+            if any(s in k_lower for s in _SENSITIVE_KEYS):
+                out[k] = "***"
+            else:
+                out[k] = _mask_sensitive_in_obj(v)
+        return out
+    if isinstance(obj, list):
+        return [_mask_sensitive_in_obj(v) for v in obj]
+    return obj
+
+
+def scrub_request_body(body_bytes: bytes, path: str) -> str | None:
+    """把 body_bytes 转成可入库的字符串，敏感字段已脱敏。
+    - JSON 字典 → 递归 mask
+    - 非 JSON 且命中敏感路径 → 整体 "[REDACTED]"
+    - 非 JSON 且非敏感路径 → 原文截断 4000
+    - 空 body → None
+    """
+    if not body_bytes:
+        return None
+
+    is_redact_path = any(path.startswith(p) for p in _REDACT_FULL_PATHS)
+    raw = body_bytes.decode("utf-8", errors="ignore")
+
+    try:
+        parsed = json.loads(raw)
+        masked = _mask_sensitive_in_obj(parsed)
+        return json.dumps(masked, ensure_ascii=False)[:4000]
+    except Exception:
+        if is_redact_path:
+            return "[REDACTED]"
+        return raw[:4000]
+
+
 # IP 归属地解析本地缓存（作为 L1 缓存）
 _IP_LOCATION_CACHE = {}
 _MAX_CACHE_SIZE = 2000
@@ -272,7 +327,7 @@ def setup_audit_log(app: FastAPI):
                     method=method,
                     path=path,
                     query_params=str(request.query_params) if request.query_params else None,
-                    request_body=body_bytes.decode("utf-8", errors="ignore")[:4000] if body_bytes else None,
+                    request_body=scrub_request_body(body_bytes, path),
                     status_code=status_code,
                     ip_address=get_client_ip(request),
                     user_agent=request.headers.get("user-agent", "")[:512],
@@ -296,7 +351,7 @@ def setup_audit_log(app: FastAPI):
                     method=method,
                     path=path,
                     query_params=str(request.query_params) if request.query_params else None,
-                    request_body=body_bytes.decode("utf-8", errors="ignore")[:4000] if body_bytes else None,
+                    request_body=scrub_request_body(body_bytes, path),
                     status_code=500,
                     ip_address=get_client_ip(request),
                     user_agent=request.headers.get("user-agent", "")[:512],

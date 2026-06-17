@@ -9,6 +9,16 @@
 
 ## [Unreleased]
 
+### 安全
+
+- **审计日志脱敏**（关键修复）：之前 `audit_log` 中间件直接把请求体原文写入 `sys_audit_log.request_body`，导致 `/auth/login`、`/me/password`、`/auth/forgot-password` 等接口的密码 / 验证码 / token **明文落库**。
+  - `middleware/audit_log.py` 新增 `scrub_request_body()`：JSON body 递归 mask `password / passwd / pwd / old_password / new_password / token / access_token / refresh_token / secret / code / authorization` 等键；非 JSON body 命中敏感路径直接 `[REDACTED]`；其他原文截断到 4000。
+  - 启动时一次性 `AuditService.scrub_history()` 对历史 `request_body` 跑同样的脱敏；Redis 标记 `audit_scrub_done` 30 天，重启不会重复跑。
+
+### UI 改进
+
+- **菜单管理按钮 pill 可点击性增强**：橙色按钮 pill 加 hover 高亮 + cursor:pointer + title 提示"点击编辑按钮权限"，避免用户误以为按钮节点不能在 UI 里配置。
+
 ### 新增
 
 - **菜单字段 `admin_sidebar_hidden`**：替代之前在 guards.js 里硬编码的 `ADMIN_ONLY_PATHS`，让"哪些菜单不出现在 admin 侧栏"由数据决定：

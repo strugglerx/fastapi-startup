@@ -42,6 +42,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"种子管理员 ensure 失败（已跳过）: {e}")
 
+    # 一次性历史审计日志脱敏（首次启动时跑，Redis 标记已完成）
+    try:
+        from app.service import AuditService
+        AuditService.scrub_history()
+    except Exception as e:
+        logger.warning(f"审计日志历史脱敏跳过（不影响新写入的日志已脱敏）: {e}")
+
     # 启动异步任务队列 Worker 与定时任务调度器
     try:
         from app.core.tasks import task_worker_loop, enqueue_task

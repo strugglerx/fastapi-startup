@@ -55,6 +55,53 @@ class AuditService:
             }
 
     @classmethod
+    def scrub_history(cls) -> dict:
+        """一次性把历史 request_body 跑一遍脱敏。
+        - 仅处理可能含敏感字段的路径（_REDACT_FULL_PATHS）或包含敏感关键字的 JSON body
+        - 处理完写一个标记到 Redis 避免重复跑：audit_scrub_done = "1" / 30 天
+        """
+        from app.core.redis_pool import RedisPool
+        from app.middleware.audit_log import scrub_request_body
+        from app.boot import logger
+
+        try:
+            r = RedisPool.get_redis()
+            if r.get("audit_scrub_done") == b"1" or r.get("audit_scrub_done") == "1":
+                return {"skipped": True, "reason": "already_done"}
+        except Exception as e:
+            logger.debug(f"audit scrub redis check skipped: {e}")
+            r = None
+
+        scanned = 0
+        scrubbed = 0
+        with SessionLocal() as db:
+            rows = db.query(SysAuditLog).filter(
+                SysAuditLog.request_body.isnot(None),
+                SysAuditLog.request_body != "",
+            ).yield_per(500)
+
+            for row in rows:
+                scanned += 1
+                if not row.request_body:
+                    continue
+                cleaned = scrub_request_body(row.request_body.encode("utf-8"), row.path or "")
+                if cleaned != row.request_body:
+                    row.request_body = cleaned
+                    scrubbed += 1
+                if scrubbed and scrubbed % 500 == 0:
+                    db.commit()
+            db.commit()
+
+        if r is not None:
+            try:
+                r.setex("audit_scrub_done", 30 * 24 * 3600, "1")
+            except Exception:
+                pass
+
+        logger.info(f"✓ 审计日志历史脱敏：扫 {scanned} 行，改写 {scrubbed} 行")
+        return {"scanned": scanned, "scrubbed": scrubbed}
+
+    @classmethod
     def clean_old_logs(cls, retention_days: int) -> int:
         """删除 retention_days 之前的所有审计日志"""
         from datetime import datetime, timedelta
