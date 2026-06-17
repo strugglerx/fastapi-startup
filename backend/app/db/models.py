@@ -141,3 +141,53 @@ class SysAuditLog(Base):
     user_agent   = Column(String(512), nullable=True, comment="浏览器UserAgent")
     cost_time    = Column(Integer, nullable=False, comment="耗时(ms)")
     created_at   = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+
+
+class SysFile(Base):
+    __tablename__ = "sys_files"
+    __table_args__ = (
+        sa.Index("idx_file_hash", "hash_md5"),
+        {"comment": "系统上传文件记录"},
+    )
+
+    id         = Column(BigInteger().with_variant(mysql.BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    filename   = Column(String(255), nullable=False, comment="原始文件名")
+    filepath   = Column(String(512), nullable=False, comment="文件相对存储路径")
+    file_size  = Column(Integer, nullable=False, comment="文件大小(字节)")
+    mime_type  = Column(String(128), nullable=True, comment="文件MIME类型")
+    hash_md5   = Column(String(32), nullable=True, comment="文件MD5哈希值")
+    created_by = Column(Integer, nullable=True, comment="上传用户ID")
+    created_at = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+
+
+class SysDict(Base):
+    __tablename__ = "sys_dict"
+    __table_args__ = (
+        {"comment": "数据字典分类"},
+    )
+
+    id          = Column(BigInteger().with_variant(mysql.BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    code        = Column(String(64), unique=True, nullable=False, comment="字典编码")
+    name        = Column(String(64), nullable=False, comment="字典名称")
+    description = Column(String(255), nullable=True, comment="描述")
+    enabled     = Column(Boolean, default=True, nullable=False, comment="是否启用")
+    created_at  = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+    updated_at  = Column(sa.DateTime(timezone=True), default=_now, onupdate=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+
+
+class SysDictItem(Base):
+    __tablename__ = "sys_dict_item"
+    __table_args__ = (
+        sa.UniqueConstraint("dict_code", "value", name="uk_dict_code_value"),
+        sa.Index("idx_dict_item_code_sort", "dict_code", "sort"),
+        {"comment": "数据字典明细"},
+    )
+
+    id         = Column(BigInteger().with_variant(mysql.BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    dict_code  = Column(String(64), nullable=False, comment="所属字典编码")
+    label      = Column(String(128), nullable=False, comment="字典标签")
+    value      = Column(String(128), nullable=False, comment="字典键值")
+    sort       = Column(Integer, default=0, nullable=False, comment="排序号")
+    enabled    = Column(Boolean, default=True, nullable=False, comment="是否启用")
+    created_at = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+    updated_at = Column(sa.DateTime(timezone=True), default=_now, onupdate=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)

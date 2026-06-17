@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import get_current_user, require_admin
+from app.api.v1.deps import get_current_user, require_admin, require_permission
 from app.service import UserService
 
 router = APIRouter(prefix="/admins", tags=["管理员"])
@@ -44,7 +44,7 @@ async def list_admins(
     keyword:   Optional[str] = Query(None),
     role:      Optional[str] = Query(None, pattern=_ROLE_PATTERN),
     is_active: Optional[bool] = Query(None),
-    _admin=Depends(require_admin),
+    _admin=Depends(require_permission("system:admin:list")),
 ):
     return UserService.list_admins(
         page=page, size=size, keyword=keyword, role=role, is_active=is_active,
@@ -52,7 +52,7 @@ async def list_admins(
 
 
 @router.post("", summary="创建账号")
-async def create_admin(req: CreateAdminReq, _admin=Depends(require_admin)):
+async def create_admin(req: CreateAdminReq, _admin=Depends(require_permission("system:admin:create"))):
     return UserService.create_admin(
         username=req.username,
         password=req.password,
@@ -66,7 +66,7 @@ async def create_admin(req: CreateAdminReq, _admin=Depends(require_admin)):
 async def update_admin(
     user_id: int,
     req: UpdateAdminReq,
-    actor=Depends(require_admin),
+    actor=Depends(require_permission("system:admin:update")),
 ):
     return UserService.update_admin(
         user_id,
@@ -80,10 +80,10 @@ async def update_admin(
 
 
 @router.post("/{user_id}/reset-password", summary="重置密码")
-async def reset_password(user_id: int, req: ResetPasswordReq, _admin=Depends(require_admin)):
+async def reset_password(user_id: int, req: ResetPasswordReq, _admin=Depends(require_permission("system:admin:password"))):
     return UserService.reset_password(user_id, req.new_password)
 
 
 @router.delete("/{user_id}", summary="删除账号")
-async def delete_admin(user_id: int, actor=Depends(require_admin)):
+async def delete_admin(user_id: int, actor=Depends(require_permission("system:admin:delete"))):
     return UserService.delete_admin(user_id, actor=actor)

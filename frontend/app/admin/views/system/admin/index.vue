@@ -2,7 +2,7 @@
   <div class="admin-page">
     <AdminPageHeader title="账号管理" subtitle="后台登录账号的创建、编辑、重置密码与删除">
       <template #actions>
-        <n-button type="primary" size="small" @click="openCreate">新建账号</n-button>
+        <n-button v-auth="'system:admin:create'" type="primary" size="small" @click="openCreate">新建账号</n-button>
       </template>
     </AdminPageHeader>
 
@@ -139,6 +139,7 @@ import {
 } from "naive-ui"
 import { fetchRoles } from "../../../api/role.js"
 import { http } from "../../../api/http.js"
+import { hasPermission } from "../../../shared/auth.js"
 import AdminPageHeader from "../../../components/AdminPageHeader.vue"
 
 defineOptions({ name: "SystemAdmin" })
@@ -233,7 +234,7 @@ const columns = computed(() => [
     width: 120,
     render: (row) => h(NSwitch, {
       value: Boolean(row.is_active),
-      disabled: isSelf(row) || Boolean(row.fixed),
+      disabled: isSelf(row) || Boolean(row.fixed) || !hasPermission("system:admin:update"),
       "onUpdate:value": (value) => updateActive(row, value),
     }),
   },
@@ -243,25 +244,31 @@ const columns = computed(() => [
     title: "操作",
     key: "actions",
     width: 310,
-    render: (row) => h(NSpace, { size: 6 }, {
-      default: () => [
-        h(NButton, { size: "small", quaternary: true, onClick: () => openEdit(row) }, { default: () => "编辑" }),
-        h(NButton, {
+    render: (row) => {
+      const btns = []
+      if (hasPermission("system:admin:update")) {
+        btns.push(h(NButton, { size: "small", quaternary: true, onClick: () => openEdit(row) }, { default: () => "编辑" }))
+        btns.push(h(NButton, {
           size: "small",
           quaternary: true,
           disabled: isSelf(row),
           onClick: () => openRole(row),
-        }, { default: () => "改角色" }),
-        h(NButton, { size: "small", quaternary: true, onClick: () => openReset(row) }, { default: () => "重置密码" }),
-        h(NButton, {
+        }, { default: () => "改角色" }))
+      }
+      if (hasPermission("system:admin:password")) {
+        btns.push(h(NButton, { size: "small", quaternary: true, onClick: () => openReset(row) }, { default: () => "重置密码" }))
+      }
+      if (hasPermission("system:admin:delete")) {
+        btns.push(h(NButton, {
           size: "small",
           quaternary: true,
           type: "error",
           disabled: isSelf(row) || Boolean(row.fixed),
           onClick: () => confirmDelete(row),
-        }, { default: () => "删除" }),
-      ],
-    }),
+        }, { default: () => "删除" }))
+      }
+      return h(NSpace, { size: 6 }, { default: () => btns })
+    }
   },
 ])
 

@@ -14,9 +14,9 @@ from app.service.role_service import RoleService
 # ────────────────────────────────────────────────────────────────────
 # 序列化辅助
 # ────────────────────────────────────────────────────────────────────
-def _user_to_dict(u: User) -> dict:
+def _user_to_dict(u: User, permissions: list = None) -> dict:
     """前端契约：含 id / email / username / full_name / role / fixed / is_active"""
-    return {
+    res = {
         "id":         u.id,
         "email":      u.email,
         "username":   u.username,
@@ -28,6 +28,9 @@ def _user_to_dict(u: User) -> dict:
         "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
         "created_at": u.created_at.isoformat() if u.created_at else None,
     }
+    if permissions is not None:
+        res["permissions"] = permissions
+    return res
 
 
 def _normalize_email(s: Optional[str]) -> Optional[str]:
@@ -77,13 +80,23 @@ class UserService:
                 subject=f"{user.id}_{int(bool(user.fixed))}",
                 expires_delta=timedelta(minutes=jwt_config.expire_minutes),
             )
+            
+            # 获取用户权限列表
+            from app.db import SysRoleMenu
+            if user.role == "admin" or user.fixed:
+                perms = ["*"]
+            else:
+                with SessionLocal() as db:
+                    grants = db.query(SysRoleMenu.menu_key).filter(SysRoleMenu.role == user.role).all()
+                    perms = [row.menu_key for row in grants]
+
             # 同时支持前端裸 token 字段 + 标准 access_token
             return {
                 "token":        token,
                 "access_token": token,
                 "token_type":   "bearer",
                 "expires_in":   jwt_config.expire_minutes * 60,
-                "user":         _user_to_dict(user),
+                "user":         _user_to_dict(user, permissions=perms),
             }
 
     # ──────────────────────────────────────────
@@ -91,9 +104,19 @@ class UserService:
     # ──────────────────────────────────────────
     @classmethod
     def get_me(cls, user: User) -> dict:
+        from app.db import SysRoleMenu
         with SessionLocal() as db:
             fresh = db.query(User).filter(User.id == user.id).first()
-            return _user_to_dict(fresh or user)
+            u = fresh or user
+            
+            # 获取用户权限列表
+            if u.role == "admin" or u.fixed:
+                perms = ["*"]
+            else:
+                grants = db.query(SysRoleMenu.menu_key).filter(SysRoleMenu.role == u.role).all()
+                perms = [row.menu_key for row in grants]
+                
+            return _user_to_dict(u, permissions=perms)
 
     @classmethod
     def update_self_profile(

@@ -172,3 +172,22 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
 async def require_login(current_user: User = Depends(get_current_user)) -> User:
     """要求登录（admin 或 member 都可）"""
     return current_user
+
+
+def require_permission(permission: str):
+    """验证当前用户是否拥有指定权限"""
+    async def dependency(current_user: User = Depends(get_current_user)) -> User:
+        if is_admin(current_user):
+            return current_user
+        
+        # 延迟导入，防止循环依赖
+        from app.db import SysRoleMenu
+        with SessionLocal() as db:
+            has_grant = db.query(SysRoleMenu).filter(
+                SysRoleMenu.role == current_user.role,
+                SysRoleMenu.menu_key == permission
+            ).first()
+            if not has_grant:
+                raise APIException(msg=f"权限不足，需要权限: {permission}", code=403)
+        return current_user
+    return dependency

@@ -41,27 +41,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"种子管理员 ensure 失败（已跳过）: {e}")
 
-    # 启动审计日志定时清理任务
+    # 启动异步任务队列 Worker 与定时任务调度器
     try:
-        from app.service import AuditService
+        from app.core.tasks import task_worker_loop, enqueue_task
         import asyncio
         
-        async def audit_cleanup_loop():
+        asyncio.create_task(task_worker_loop())
+        
+        async def audit_cleanup_scheduler():
             retention_days = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "180"))
-            logger.info(f"审计日志自动清理任务已启动，保留天数: {retention_days}天")
+            logger.info(f"审计日志自动清理调度器启动，日志保留天数: {retention_days}天")
             while True:
                 try:
-                    deleted = AuditService.clean_old_logs(retention_days)
-                    if deleted > 0:
-                        logger.info(f"已自动清理 {deleted} 条过期审计日志(>{retention_days}天)")
+                    await enqueue_task("clean_old_audit_logs", retention_days)
                 except Exception as ex:
-                    logger.error(f"清理审计日志异常: {ex}")
-                # 每 24 小时检查一次
+                    logger.error(f"下发清理审计日志任务异常: {ex}")
+                # 每 24 小时调度一次
                 await asyncio.sleep(24 * 3600)
                 
-        asyncio.create_task(audit_cleanup_loop())
+        asyncio.create_task(audit_cleanup_scheduler())
     except Exception as e:
-        logger.warning(f"审计日志自动清理任务启动失败: {e}")
+        logger.warning(f"异步任务队列/调度器启动失败: {e}")
 
     try:
         mount_static(app)

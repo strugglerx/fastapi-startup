@@ -180,6 +180,18 @@ class MenuService:
             "parentKey": "g:system",
             "sort": 14,
         },
+        "system:file": {
+            "title": "文件管理",
+            "icon": "FolderOpen",
+            "parentKey": "g:system",
+            "sort": 15,
+        },
+        "system:dict": {
+            "title": "数据字典",
+            "icon": "BookOpen",
+            "parentKey": "g:system",
+            "sort": 16,
+        },
     }
 
     @classmethod
