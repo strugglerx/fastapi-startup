@@ -11,6 +11,16 @@
 
 ### 安全
 
+- **密码强度策略**：`app/core/security.py:validate_password_strength` —— 长度 8-128、至少含 1 字母+1 数字、不允许全相同字符。接入 `change_password` / `reset_password` / `create_admin` / `register`。
+- **找回密码（邮箱验证码流）**：
+  - 新增 `POST /api/v1/auth/forgot-password` 与 `POST /api/v1/auth/reset-password`，6 位数字验证码 / 10 分钟有效 / 一次性 / 1 分钟内同邮箱仅 1 次。
+  - 新增 `MailConfig`（环境变量 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_SENDER` / `SMTP_USE_TLS` / `SMTP_USE_SSL`）与 `app/core/mailer.py`。
+  - SMTP 未配置时所有依赖邮件的接口返回 HTTP 503 + `code=10030` 友好提示"邮件服务暂未开通"。
+  - 登录页（`LoginCard.vue`）"忘记密码"链接改为真正的两步重置流程（发码 / 输码 + 新密码）。
+- **Token 静默续期**：
+  - 后端新增 `POST /api/v1/auth/refresh`（需登录，限流 30/60s）。
+  - 前端 `api/token-refresh.js`：解 JWT `exp`，在剩余 ≤ 10 分钟时主动续期，并发请求共用同一 Promise；接入 `fetch.js` request 拦截器；refresh 接口本身跳过避免递归。
+- **限流降级日志**：`RateLimiter` 在 Redis 故障时输出结构化日志（`rate_limiter.degraded limiter=... path=... method=... identifier=... reason=...`），便于监控告警提取。
 - **登录失败账号锁定**：连续 5 次失败（10 分钟窗口）锁定账号 15 分钟，返回 429；Redis 不可用时降级到不锁定。实现位于 `app/service/user_service.py`（`_check_login_lock` / `_record_login_fail` / `_clear_login_fail`）。
 - **敏感写接口限流**：
   - `PUT /api/v1/me/password` → 5 次 / 60 秒

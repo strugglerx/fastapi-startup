@@ -1,4 +1,4 @@
-from .config import settings, app_config, database_config, redis_config, jwt_config
+from .config import settings, app_config, database_config, redis_config, jwt_config, mail_config
 from .logger import logger
 from .exceptions import APIException
 from .plugins import (
@@ -18,6 +18,7 @@ __all__ = [
     "database_config",
     "redis_config",
     "jwt_config",
+    "mail_config",
     "logger",
     "APIException",
     "setup_cors",

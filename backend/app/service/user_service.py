@@ -7,7 +7,7 @@ from sqlalchemy import or_
 from app.boot import APIException, jwt_config, logger
 from app.core.jwt import create_access_token
 from app.core.redis_pool import RedisPool
-from app.core.security import get_password_hash, verify_password
+from app.core.security import get_password_hash, validate_password_strength, verify_password
 from app.db import SessionLocal, User
 from app.service.role_service import RoleService
 
@@ -221,8 +221,7 @@ class UserService:
         """用户改自己的密码：先验旧密"""
         if not old_password:
             raise APIException("请输入当前密码", code=10015, status_code=400)
-        if len(new_password) < 6:
-            raise APIException("新密码至少 6 个字符", code=10002, status_code=400)
+        validate_password_strength(new_password)
         if old_password == new_password:
             raise APIException("新密码不能与旧密码相同", code=10016, status_code=400)
         with SessionLocal() as db:
@@ -236,6 +235,120 @@ class UserService:
             return {"id": user_id, "password_changed": True}
 
     # ──────────────────────────────────────────
+    # Token 续期：仅当当前 token 还有效但临近过期时换发新 token
+    # 由 require_login → get_current_user 已经验证过 token；此处只需重发
+    # ──────────────────────────────────────────
+    @classmethod
+    def refresh_token(cls, user: User) -> dict:
+        token = create_access_token(
+            subject=f"{user.id}_{int(bool(user.fixed))}",
+            expires_delta=timedelta(minutes=jwt_config.expire_minutes),
+        )
+        return {
+            "token":        token,
+            "access_token": token,
+            "token_type":   "bearer",
+            "expires_in":   jwt_config.expire_minutes * 60,
+        }
+
+    # ──────────────────────────────────────────
+    # 找回密码（邮箱验证码流，SMTP 未配置时由 mailer 抛 503）
+    #   Redis key：
+    #     pwreset_code:{email}    -> 6 位数字，TTL 600s（10 分钟）
+    #     pwreset_send:{email}    -> 防刷标记，TTL 60s（同一邮箱 1 分钟内只发 1 次）
+    # ──────────────────────────────────────────
+    @classmethod
+    def request_password_reset(cls, email: str) -> dict:
+        from app.core.mailer import send_mail  # 延迟引入，避免 boot 顺序问题
+        import secrets
+
+        email_norm = _normalize_email(email)
+        if not email_norm:
+            raise APIException("请输入合法的邮箱", code=10018, status_code=400)
+
+        # 始终返回相同结构，避免邮箱探测；SMTP 未配置时直接抛 503（友好提示）
+        from app.core.mailer import _ensure_configured  # noqa
+        _ensure_configured()
+
+        # 防刷：60s 内同邮箱仅 1 次
+        try:
+            r = RedisPool.get_redis()
+            if r.get(f"pwreset_send:{email_norm}"):
+                raise APIException("发送过于频繁，请稍后再试", code=10019, status_code=429)
+        except APIException:
+            raise
+        except Exception as e:
+            logger.debug(f"pwreset throttle check skipped: {e}")
+
+        with SessionLocal() as db:
+            user = db.query(User).filter(
+                User.email == email_norm, User.deleted_at.is_(None)
+            ).first()
+
+        # 即使邮箱不存在也走一遍假流程，但不真正发送（避免被用来探测注册邮箱）
+        if user:
+            code = f"{secrets.randbelow(1000000):06d}"
+            try:
+                r = RedisPool.get_redis()
+                r.setex(f"pwreset_code:{email_norm}", 600, code)
+                r.setex(f"pwreset_send:{email_norm}", 60, "1")
+            except Exception as e:
+                logger.error(f"pwreset redis store failed: {e}")
+                raise APIException("服务暂不可用，请稍后重试", code=10031, status_code=503)
+
+            send_mail(
+                to=email_norm,
+                subject="【智慧AI 探索平台】密码重置验证码",
+                body=(
+                    f"您好，\n\n"
+                    f"您的密码重置验证码是：{code}\n"
+                    f"该验证码 10 分钟内有效，仅可使用一次。\n\n"
+                    f"如果您没有发起此请求，请忽略本邮件。\n"
+                ),
+            )
+
+        return {"sent": True}
+
+    @classmethod
+    def confirm_password_reset(cls, email: str, code: str, new_password: str) -> dict:
+        email_norm = _normalize_email(email)
+        if not email_norm:
+            raise APIException("请输入合法的邮箱", code=10018, status_code=400)
+        if not code or len(code) != 6:
+            raise APIException("验证码格式不正确", code=10018, status_code=400)
+        validate_password_strength(new_password)
+
+        # 校验验证码
+        try:
+            r = RedisPool.get_redis()
+            stored = r.get(f"pwreset_code:{email_norm}")
+        except Exception as e:
+            logger.error(f"pwreset redis get failed: {e}")
+            raise APIException("服务暂不可用，请稍后重试", code=10031, status_code=503)
+
+        stored_str = stored.decode() if isinstance(stored, bytes) else stored
+        if not stored_str or stored_str != code:
+            raise APIException("验证码无效或已过期", code=10018, status_code=400)
+
+        with SessionLocal() as db:
+            user = db.query(User).filter(
+                User.email == email_norm, User.deleted_at.is_(None)
+            ).first()
+            if not user:
+                raise APIException("账号不存在", code=10005, status_code=404)
+            user.hashed_password = get_password_hash(new_password)
+            db.commit()
+
+        # 一次性使用：成功后立即清除验证码 + 解除锁定
+        try:
+            r = RedisPool.get_redis()
+            r.delete(f"pwreset_code:{email_norm}", _lock_key(email_norm), _fail_key(email_norm))
+        except Exception:
+            pass
+
+        return {"reset": True}
+
+    # ──────────────────────────────────────────
     # 注册（保留：终端用户场景；后台管理员请用 create_admin）
     # ──────────────────────────────────────────
     @classmethod
@@ -243,8 +356,7 @@ class UserService:
         username = (username or "").strip()
         if len(username) < 3:
             raise APIException("用户名至少 3 个字符", code=10001)
-        if len(password) < 6:
-            raise APIException("密码至少 6 个字符", code=10002)
+        validate_password_strength(password)
 
         with SessionLocal() as db:
             if db.query(User).filter(User.username == username).first():
@@ -277,8 +389,7 @@ class UserService:
         username = (username or "").strip()
         if len(username) < 3:
             raise APIException("用户名至少 3 个字符", code=10001, status_code=400)
-        if len(password) < 6:
-            raise APIException("密码至少 6 个字符", code=10002, status_code=400)
+        validate_password_strength(password)
         if role not in RoleService.get_active_codes():
             raise APIException("角色不存在或已停用", code=10007, status_code=400)
 
@@ -390,8 +501,7 @@ class UserService:
 
     @classmethod
     def reset_password(cls, user_id: int, new_password: str) -> dict:
-        if len(new_password) < 6:
-            raise APIException("密码至少 6 个字符", code=10002, status_code=400)
+        validate_password_strength(new_password)
         with SessionLocal() as db:
             u = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
             if not u:

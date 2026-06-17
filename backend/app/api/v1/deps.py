@@ -240,7 +240,12 @@ class RateLimiter:
         except APIException:
             raise
         except Exception as e:
-            logger.warning(f"RateLimiter Redis checking failed: {e}")
+            # Redis 故障时降级到放行（保可用性），但用结构化日志便于监控告警
+            logger.warning(
+                "rate_limiter.degraded "
+                f"limiter={self.name} path={request.url.path} method={request.method} "
+                f"identifier={identifier} reason={type(e).__name__}: {e}"
+            )
 
         return True
 

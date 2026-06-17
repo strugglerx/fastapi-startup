@@ -8,7 +8,7 @@
         </p>
       </div>
 
-      <form class="promax-form" @submit.prevent="handleLogin" novalidate>
+      <form v-if="mode === 'login'" class="promax-form" @submit.prevent="handleLogin" novalidate>
         <div class="form-item">
           <label>邮箱或账号</label>
           <input v-model="username" type="text" placeholder="输入邮箱或账号" required :disabled="loading" />
@@ -17,7 +17,7 @@
         <div class="form-item">
           <div class="label-row">
             <label>密码</label>
-            <a href="#" class="forgot-link" @click.prevent="showForgotHint = !showForgotHint">忘记密码？</a>
+            <a href="#" class="forgot-link" @click.prevent="enterForgotMode">忘记密码？</a>
           </div>
           <div class="input-with-icon">
             <input v-model="password" :type="showPwd ? 'text' : 'password'" placeholder="••••••••" required :disabled="loading" />
@@ -27,13 +27,6 @@
             </button>
           </div>
         </div>
-
-        <Transition name="fade">
-          <div v-if="showForgotHint" class="alert info">
-            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            请联系管理员重置密码。
-          </div>
-        </Transition>
 
         <div class="form-item checkbox-item">
           <label class="promax-checkbox">
@@ -52,11 +45,71 @@
           </div>
         </Transition>
 
+        <Transition name="fade">
+          <div v-if="successMsg" class="alert success">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            {{ successMsg }}
+          </div>
+        </Transition>
+
         <button type="submit" class="promax-btn primary" :disabled="loading || !canSubmit">
           <span v-if="loading" class="spinner"></span>
           <span>{{ loading ? '验证中...' : '登 录' }}</span>
           <svg v-if="!loading" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" class="btn-arrow"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
+      </form>
+
+      <!-- 忘记密码：第 1 步——发送邮箱验证码 -->
+      <form v-else-if="mode === 'forgot-send'" class="promax-form" @submit.prevent="handleSendCode" novalidate>
+        <div class="form-item">
+          <label>邮箱</label>
+          <input v-model="forgotEmail" type="email" placeholder="输入注册邮箱" required :disabled="loading" autocomplete="email" />
+        </div>
+
+        <p class="hint-text">系统将向你的注册邮箱发送 6 位验证码（10 分钟内有效）。</p>
+
+        <Transition name="fade">
+          <div v-if="errorMsg" class="alert error">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ errorMsg }}
+          </div>
+        </Transition>
+
+        <button type="submit" class="promax-btn primary" :disabled="loading || !forgotEmail">
+          <span v-if="loading" class="spinner"></span>
+          <span>{{ loading ? '发送中...' : '发送验证码' }}</span>
+        </button>
+        <button type="button" class="link-btn" @click="exitForgotMode">返回登录</button>
+      </form>
+
+      <!-- 忘记密码：第 2 步——输入验证码 + 新密码 -->
+      <form v-else-if="mode === 'forgot-reset'" class="promax-form" @submit.prevent="handleResetPassword" novalidate>
+        <div class="form-item">
+          <label>邮箱</label>
+          <input :value="forgotEmail" type="email" disabled />
+        </div>
+        <div class="form-item">
+          <label>验证码</label>
+          <input v-model="forgotCode" type="text" maxlength="6" inputmode="numeric" placeholder="6 位验证码" required :disabled="loading" />
+        </div>
+        <div class="form-item">
+          <label>新密码</label>
+          <input v-model="forgotNewPwd" type="password" placeholder="至少 8 位，含字母+数字" required :disabled="loading" autocomplete="new-password" />
+          <p class="hint-text">密码长度 ≥ 8 位，必须包含至少 1 个字母 + 1 个数字。</p>
+        </div>
+
+        <Transition name="fade">
+          <div v-if="errorMsg" class="alert error">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ errorMsg }}
+          </div>
+        </Transition>
+
+        <button type="submit" class="promax-btn primary" :disabled="loading || !forgotCode || !forgotNewPwd">
+          <span v-if="loading" class="spinner"></span>
+          <span>{{ loading ? '提交中...' : '重置密码' }}</span>
+        </button>
+        <button type="button" class="link-btn" @click="exitForgotMode">返回登录</button>
       </form>
     </div>
   </div>
@@ -76,8 +129,87 @@ const showPwd  = ref(false)
 const rememberMe = ref(false)
 const loading  = ref(false)
 const errorMsg = ref("")
-const showForgotHint = ref(false)
+const successMsg = ref("")
 const loginCard = ref(null)
+
+// "login" | "forgot-send" | "forgot-reset"
+const mode = ref("login")
+const forgotEmail  = ref("")
+const forgotCode   = ref("")
+const forgotNewPwd = ref("")
+
+function enterForgotMode() {
+  errorMsg.value = ""
+  successMsg.value = ""
+  // 把当前登录输入的内容当成邮箱预填，免得用户重输
+  forgotEmail.value = username.value.trim()
+  forgotCode.value = ""
+  forgotNewPwd.value = ""
+  mode.value = "forgot-send"
+}
+
+function exitForgotMode() {
+  errorMsg.value = ""
+  mode.value = "login"
+}
+
+async function _post(path, body) {
+  const res = await fetch(path, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok || (json && json.code && json.code !== 0)) {
+    const msg = json?.msg || json?.detail || `请求失败 (${res.status})`
+    return { __error: true, msg, status: res.status }
+  }
+  return _unwrap(json)
+}
+
+async function handleSendCode() {
+  if (!forgotEmail.value) return
+  errorMsg.value = ""
+  loading.value = true
+  try {
+    const r = await _post("/api/v1/auth/forgot-password", { email: forgotEmail.value.trim() })
+    if (r?.__error) {
+      errorMsg.value = r.msg
+      return
+    }
+    mode.value = "forgot-reset"
+  } catch {
+    errorMsg.value = "网络异常，请稍后再试。"
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleResetPassword() {
+  errorMsg.value = ""
+  loading.value = true
+  try {
+    const r = await _post("/api/v1/auth/reset-password", {
+      email: forgotEmail.value.trim(),
+      code: forgotCode.value.trim(),
+      new_password: forgotNewPwd.value,
+    })
+    if (r?.__error) {
+      errorMsg.value = r.msg
+      return
+    }
+    // 重置成功——回登录页 + 提示
+    mode.value = "login"
+    successMsg.value = "密码已重置，请用新密码登录。"
+    password.value = ""
+    forgotCode.value = ""
+    forgotNewPwd.value = ""
+  } catch {
+    errorMsg.value = "网络异常，请稍后再试。"
+  } finally {
+    loading.value = false
+  }
+}
 
 onMounted(() => {
   const saved = localStorage.getItem(REMEMBER_KEY)
@@ -464,6 +596,28 @@ async function handleLogin() {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.hint-text {
+  font-size: 12px;
+  color: #A1A1AA;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #A1A1AA;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px;
+  margin: 0 auto;
+  transition: color 0.2s;
+}
+.link-btn:hover {
+  color: #FFFFFF;
+}
 
 @media (max-width: 768px) {
   .glass-card { padding: 32px 24px; border-radius: 16px; }

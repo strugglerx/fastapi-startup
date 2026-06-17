@@ -45,11 +45,29 @@ class JwtConfig(_Base):
     expire_minutes: int = Field(default=480, validation_alias="JWT_EXPIRE_MINUTES")
 
 
+class MailConfig(_Base):
+    """SMTP 配置——任何字段缺失（host 为空）即视为"未配置"，
+    所有依赖邮件的接口（找回密码等）会返回友好"暂不支持"提示。
+    """
+    host:     str  = Field(default="", validation_alias="SMTP_HOST")
+    port:     int  = Field(default=587, validation_alias="SMTP_PORT")
+    username: str  = Field(default="", validation_alias="SMTP_USERNAME")
+    password: str  = Field(default="", validation_alias="SMTP_PASSWORD")
+    sender:   str  = Field(default="", validation_alias="SMTP_SENDER")
+    use_tls:  bool = Field(default=True, validation_alias="SMTP_USE_TLS")
+    use_ssl:  bool = Field(default=False, validation_alias="SMTP_USE_SSL")
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.host and self.sender)
+
+
 class Settings(_Base):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
     jwt: JwtConfig = Field(default_factory=JwtConfig)
+    mail: MailConfig = Field(default_factory=MailConfig)
 
 
 def _find_env_file() -> Path:
@@ -80,12 +98,14 @@ except Exception as e:
         database=DatabaseConfig.model_construct(),
         redis=RedisConfig.model_construct(),
         jwt=JwtConfig.model_construct(),
+        mail=MailConfig.model_construct(),
     )
 
 app_config = settings.app
 database_config = settings.database
 redis_config = settings.redis
 jwt_config = settings.jwt
+mail_config = settings.mail
 
 # 启动概览（敏感信息脱敏）
 _app_env = os.getenv("APP_ENV", "development")
@@ -99,6 +119,7 @@ logger.info(f"  数据库     : {'SQLite (app/data/sqlite.db)' if _use_sqlite el
 logger.info(f"  Redis      : {redis_config.host}:{redis_config.port} ({'有密码' if redis_config.password else '无密码'})")
 logger.info(f"  JWT        : {'⚠ 使用默认密钥（不安全，生产环境请修改）' if _jwt_default else '已配置'}, 过期 {jwt_config.expire_minutes} 分钟")
 logger.info(f"  CORS       : {app_config.cors_origins_list}")
+logger.info(f"  邮件       : {'已配置 (' + mail_config.host + ')' if mail_config.is_configured else '未配置（找回密码等邮件功能将提示暂不支持）'}")
 logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 # 生产环境用默认 JWT 密钥时发警告，但不阻断启动

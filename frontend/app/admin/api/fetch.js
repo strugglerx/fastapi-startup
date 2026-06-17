@@ -18,6 +18,7 @@ import axios from "axios"
 
 import { getToken, getAdminActiveRole, toLogin } from "./base.js"
 import { notifyError } from "./feedback.js"
+import { maybeRefreshToken } from "./token-refresh.js"
 
 class Fetch {
   /**
@@ -37,8 +38,10 @@ class Fetch {
 
   _initial(instance) {
     instance.interceptors.request.use(
-      (config) => {
+      async (config) => {
         if (this._withToken) {
+          // 临近过期则后台静默刷新；refresh 接口本身会被 maybeRefreshToken 跳过
+          await maybeRefreshToken(config.url)
           const token = getToken()
           if (token) config.headers.Token = token
 
