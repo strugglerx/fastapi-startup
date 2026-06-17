@@ -169,7 +169,7 @@ export default {
 ---
 
 ### 2. Rapid Development with `ProTable`
-With [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue), you can render a full CRUD page by simply providing columns and schema:
+With [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue) (see [ProTable Development Guide](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/docs/PROTABLE_GUIDE.md) for advanced configurations), you can render a full CRUD page by simply providing columns and schema:
 
 ```html
 <template>

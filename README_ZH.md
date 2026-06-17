@@ -169,7 +169,7 @@ export default {
 ---
 
 ### 2. 使用 `ProTable` 极速完成列表页
-在前端视图的 `index.vue` 中，可以直接引入 [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue) 组件，仅传入 schema 即可自动渲染完整的增删改查页：
+在前端视图的 `index.vue` 中，可以直接引入 [ProTable](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue) 组件（高级功能配置参考 [ProTable 开发指南](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/docs/PROTABLE_GUIDE.md)），仅传入 schema 即可自动渲染完整的增删改查页：
 
 ```html
 <template>
