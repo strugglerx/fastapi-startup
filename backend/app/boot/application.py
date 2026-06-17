@@ -41,6 +41,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"种子管理员 ensure 失败（已跳过）: {e}")
 
+    # 启动审计日志定时清理任务
+    try:
+        from app.service import AuditService
+        import asyncio
+        
+        async def audit_cleanup_loop():
+            retention_days = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "180"))
+            logger.info(f"审计日志自动清理任务已启动，保留天数: {retention_days}天")
+            while True:
+                try:
+                    deleted = AuditService.clean_old_logs(retention_days)
+                    if deleted > 0:
+                        logger.info(f"已自动清理 {deleted} 条过期审计日志(>{retention_days}天)")
+                except Exception as ex:
+                    logger.error(f"清理审计日志异常: {ex}")
+                # 每 24 小时检查一次
+                await asyncio.sleep(24 * 3600)
+                
+        asyncio.create_task(audit_cleanup_loop())
+    except Exception as e:
+        logger.warning(f"审计日志自动清理任务启动失败: {e}")
+
     try:
         mount_static(app)
         logger.info("静态资源已挂载到 /")

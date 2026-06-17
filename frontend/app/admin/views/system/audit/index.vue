@@ -9,14 +9,18 @@
         placeholder="操作人用户名…"
         @input="debouncedLoadRows"
         class="toolbar-search"
-      />
+      >
+        <template #prefix><span class="search-icon" /></template>
+      </n-input>
       <n-input
         v-model:value="filters.action"
         clearable
         placeholder="操作动作或描述…"
         @input="debouncedLoadRows"
         class="toolbar-search"
-      />
+      >
+        <template #prefix><span class="search-icon" /></template>
+      </n-input>
       <n-select
         v-model:value="filters.status_code"
         clearable
@@ -28,7 +32,7 @@
       <n-button @click="resetFilters" class="toolbar-btn">重置</n-button>
     </div>
 
-    <div class="admin-data-shell">
+    <div class="admin-data-shell audit-data-shell">
       <n-data-table
         remote
         :columns="columns"
@@ -65,7 +69,7 @@
           {{ selectedRow.cost_time }} ms
         </n-descriptions-item>
         <n-descriptions-item label="IP 地址">
-          {{ selectedRow.ip_address }}
+          {{ selectedRow.ip_address }} <span v-if="selectedRow.ip_location" class="text-muted">({{ selectedRow.ip_location }})</span>
         </n-descriptions-item>
         <n-descriptions-item label="请求路径" :span="2">
           <code class="code-path">{{ selectedRow.path }}</code>
@@ -169,6 +173,17 @@ const columns = [
     title: "请求路径",
     key: "path",
     ellipsis: { tooltip: true }
+  },
+  {
+    title: "IP/归属地",
+    key: "ip_address",
+    width: 160,
+    render(row) {
+      return h("div", [
+        h("div", { class: "font-mono" }, row.ip_address || "-"),
+        row.ip_location ? h("div", { style: "font-size: 11px; color: #9ca3af" }, row.ip_location) : null
+      ])
+    }
   },
   {
     title: "状态",
@@ -308,6 +323,73 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.toolbar-search {
+  flex: 2;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.toolbar-select {
+  flex: 1;
+  min-width: 140px;
+  max-width: 180px;
+}
+
+.toolbar-btn {
+  flex-shrink: 0;
+}
+
+.search-icon {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--c-text-faint);
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+}
+
+.search-icon::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 2px;
+  right: -6px;
+  bottom: -4px;
+  border-radius: 2px;
+  background: var(--c-text-faint);
+  transform: rotate(45deg);
+}
+
+.audit-data-shell {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.audit-data-shell :deep(.n-data-table) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.audit-data-shell :deep(.n-data-table-wrapper) {
+  flex: 1;
+  min-height: 240px;
+}
+
+.audit-data-shell :deep(.n-pagination) {
+  margin-top: var(--sp-3);
+  padding: var(--sp-1) var(--sp-1) var(--sp-1);
+  justify-content: flex-end;
+}
+
 .code-path {
   font-family: monospace;
   font-size: 13px;

@@ -16,6 +16,7 @@ def _log_to_dict(row: SysAuditLog) -> dict:
         "request_body": row.request_body,
         "status_code": row.status_code,
         "ip_address": row.ip_address,
+        "ip_location": row.ip_location,
         "user_agent": row.user_agent,
         "cost_time": row.cost_time,
         "created_at": row.created_at.isoformat() if row.created_at else None,
@@ -52,3 +53,22 @@ class AuditService:
                 "page": page,
                 "size": size,
             }
+
+    @classmethod
+    def clean_old_logs(cls, retention_days: int) -> int:
+        """删除 retention_days 之前的所有审计日志"""
+        from datetime import datetime, timedelta
+        import pytz
+        
+        EAST_8_TIMEZONE = pytz.timezone("Asia/Shanghai")
+        cutoff = datetime.now(EAST_8_TIMEZONE) - timedelta(days=retention_days)
+        cutoff = cutoff.replace(microsecond=0)
+        
+        with SessionLocal() as db:
+            try:
+                deleted = db.query(SysAuditLog).filter(SysAuditLog.created_at < cutoff).delete()
+                db.commit()
+                return deleted
+            except Exception as e:
+                db.rollback()
+                raise e

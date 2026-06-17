@@ -137,6 +137,7 @@ class SysAuditLog(Base):
     request_body = Column(Text, nullable=True, comment="请求体参数")
     status_code  = Column(Integer, nullable=False, comment="HTTP状态码")
     ip_address   = Column(String(45), nullable=True, comment="IP地址")
+    ip_location  = Column(String(100), nullable=True, comment="IP归属地")
     user_agent   = Column(String(512), nullable=True, comment="浏览器UserAgent")
     cost_time    = Column(Integer, nullable=False, comment="耗时(ms)")
     created_at   = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)

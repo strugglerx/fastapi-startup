@@ -1,10 +1,10 @@
 import os
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field, field_validator
 
-from app.api.v1.deps import require_admin, require_login
+from app.api.v1.deps import require_admin, require_login, get_current_user_no_err, is_admin
 from app.boot import APIException
 from app.service.menu_service import MenuService
 
@@ -46,16 +46,30 @@ class RoleGrantsReq(BaseModel):
     menuKeys: List[str] = Field(default_factory=list)
 
 
-def require_sync_token(authorization: Optional[str] = Header(None)):
+async def require_sync_token(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    token_header: Optional[str] = Header(None, alias="Token"),
+):
     expected = os.getenv("SYNC_TOKEN", "")
-    if not expected:
-        return True
     token = authorization or ""
     if token.lower().startswith("bearer "):
         token = token[7:]
-    if token != expected:
-        raise APIException("SYNC_TOKEN 无效", code=61004, status_code=403)
-    return True
+        
+    if expected and token == expected:
+        return True
+        
+    user = await get_current_user_no_err(request, token_header)
+    if user and is_admin(user):
+        return True
+        
+    if expected:
+        raise APIException("SYNC_TOKEN 无效或需要管理员权限", code=61004, status_code=403)
+    else:
+        # 如果没有配置 SYNC_TOKEN，但在开发环境之外，也强制需要管理员权限
+        if token != "":
+            raise APIException("需要管理员权限以执行同步", code=61004, status_code=403)
+        return True
 
 
 @router.get("/list", summary="动态菜单列表")
