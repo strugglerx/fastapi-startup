@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import get_current_user, RateLimiter
+from app.api.v1.deps import get_current_user, get_current_user_no_err, RateLimiter
 from app.service import UserService
 
 router = APIRouter(prefix="/auth", tags=["认证"])
@@ -33,8 +33,10 @@ async def me(user=Depends(get_current_user)):
     return UserService.get_me(user)
 
 
-@router.post("/logout", summary="登出（无状态 JWT，no-op）")
-async def logout():
+@router.post("/logout", summary="登出（无状态 JWT，no-op；可选携带 Token 以便审计记录操作人）")
+async def logout(_user=Depends(get_current_user_no_err)):
+    # 依赖仅用于把 user 注入 request.state，供 audit_log 中间件读取；
+    # token 缺失/失效不阻断登出（用户客户端会清本地 token）
     return {"ok": True}
 
 
