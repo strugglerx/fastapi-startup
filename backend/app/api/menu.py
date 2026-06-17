@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field, field_validator
 
-from app.api.v1.deps import require_admin, require_login, get_current_user_no_err, is_admin
+from app.api.v1.deps import require_admin, require_login, get_current_user_no_err, is_admin, RateLimiter
 from app.boot import APIException
 from app.service.menu_service import MenuService
 
@@ -84,7 +84,11 @@ async def get_role_grants(role: str, _admin=Depends(require_admin)):
     return MenuService.get_role_grants(role)
 
 
-@router.put("/role-grants", summary="覆盖式设置角色的菜单授权")
+@router.put(
+    "/role-grants",
+    summary="覆盖式设置角色的菜单授权",
+    dependencies=[Depends(RateLimiter(limit=30, window=60, name="role_grants"))],
+)
 async def put_role_grants(req: RoleGrantsReq, _admin=Depends(require_admin)):
     return MenuService.set_role_grants(req.role, req.menuKeys)
 

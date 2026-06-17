@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import get_current_user, require_permission
+from app.api.v1.deps import get_current_user, require_permission, RateLimiter
 from app.service import UserService
 
 router = APIRouter(prefix="/admins", tags=["管理员"])
@@ -79,11 +79,19 @@ async def update_admin(
     )
 
 
-@router.post("/{user_id}/reset-password", summary="重置密码")
+@router.post(
+    "/{user_id}/reset-password",
+    summary="重置密码",
+    dependencies=[Depends(RateLimiter(limit=10, window=60, name="reset_password"))],
+)
 async def reset_password(user_id: int, req: ResetPasswordReq, _admin=Depends(require_permission("system:admin:password"))):
     return UserService.reset_password(user_id, req.new_password)
 
 
-@router.delete("/{user_id}", summary="删除账号")
+@router.delete(
+    "/{user_id}",
+    summary="删除账号",
+    dependencies=[Depends(RateLimiter(limit=20, window=60, name="delete_admin"))],
+)
 async def delete_admin(user_id: int, actor=Depends(require_permission("system:admin:delete"))):
     return UserService.delete_admin(user_id, actor=actor)

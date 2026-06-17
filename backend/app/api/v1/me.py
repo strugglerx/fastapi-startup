@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import require_login
+from app.api.v1.deps import require_login, RateLimiter
 from app.service import UserService
 
 router = APIRouter(prefix="/me", tags=["当前用户"])
@@ -32,7 +32,11 @@ async def update_my_profile(req: UpdateProfileReq, user=Depends(require_login)):
     )
 
 
-@router.put("/password", summary="修改自己的密码（需提供当前密码）")
+@router.put(
+    "/password",
+    summary="修改自己的密码（需提供当前密码）",
+    dependencies=[Depends(RateLimiter(limit=5, window=60, name="change_password"))],
+)
 async def change_my_password(req: ChangePasswordReq, user=Depends(require_login)):
     return UserService.change_password(
         user.id, old_password=req.old_password, new_password=req.new_password,

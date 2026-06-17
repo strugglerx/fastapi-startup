@@ -9,6 +9,16 @@
 
 ## [Unreleased]
 
+### 安全
+
+- **登录失败账号锁定**：连续 5 次失败（10 分钟窗口）锁定账号 15 分钟，返回 429；Redis 不可用时降级到不锁定。实现位于 `app/service/user_service.py`（`_check_login_lock` / `_record_login_fail` / `_clear_login_fail`）。
+- **敏感写接口限流**：
+  - `PUT /api/v1/me/password` → 5 次 / 60 秒
+  - `POST /api/v1/admins/{id}/reset-password` → 10 次 / 60 秒
+  - `DELETE /api/v1/admins/{id}` → 20 次 / 60 秒
+  - `PUT /api/menu/role-grants` → 30 次 / 60 秒
+- **dashboard admin-only 守卫**：`frontend/app/admin/router/guards.js` 新增 `ADMIN_ONLY_PATHS`，非 admin 直接访问 `/dashboard` 时自动跳到其第一个授权菜单；根入口 `/` / `/404` 也跳第一个授权菜单（admin 第一项通常仍是 dashboard）。
+
 ### 新增
 
 - **菜单组织 UI 化**：

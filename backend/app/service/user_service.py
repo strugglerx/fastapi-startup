@@ -4,11 +4,73 @@ from typing import Optional
 
 from sqlalchemy import or_
 
-from app.boot import APIException, jwt_config
+from app.boot import APIException, jwt_config, logger
 from app.core.jwt import create_access_token
+from app.core.redis_pool import RedisPool
 from app.core.security import get_password_hash, verify_password
 from app.db import SessionLocal, User
 from app.service.role_service import RoleService
+
+
+# ────────────────────────────────────────────────────────────────────
+# 登录失败锁定（按账号 + IP 双维度，防止单账号被刷死同时也防止暴破）
+#   - 失败累计窗口：LOGIN_FAIL_WINDOW 秒内
+#   - 连续失败上限：LOGIN_FAIL_MAX 次
+#   - 锁定时长：LOGIN_LOCK_SECONDS 秒
+#   - Redis 不可用时降级到不锁定（保证可用性）
+# ────────────────────────────────────────────────────────────────────
+LOGIN_FAIL_MAX = 5
+LOGIN_FAIL_WINDOW = 600   # 10 分钟窗口
+LOGIN_LOCK_SECONDS = 900  # 锁 15 分钟
+
+
+def _fail_key(identifier: str) -> str:
+    return f"login_fail:{identifier.strip().lower()}"
+
+
+def _lock_key(identifier: str) -> str:
+    return f"login_lock:{identifier.strip().lower()}"
+
+
+def _check_login_lock(identifier: str) -> None:
+    """命中锁定时直接抛 APIException；Redis 故障静默放行。"""
+    try:
+        r = RedisPool.get_redis()
+        ttl = r.ttl(_lock_key(identifier))
+        if ttl and ttl > 0:
+            mins = max(1, ttl // 60)
+            raise APIException(
+                f"账号已被临时锁定，请 {mins} 分钟后重试",
+                code=10013,
+                status_code=429,
+            )
+    except APIException:
+        raise
+    except Exception as e:
+        logger.debug(f"login lock check skipped: {e}")
+
+
+def _record_login_fail(identifier: str) -> None:
+    try:
+        r = RedisPool.get_redis()
+        key = _fail_key(identifier)
+        pipe = r.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, LOGIN_FAIL_WINDOW)
+        count, _ = pipe.execute()
+        if int(count) >= LOGIN_FAIL_MAX:
+            r.setex(_lock_key(identifier), LOGIN_LOCK_SECONDS, "1")
+            r.delete(key)
+    except Exception as e:
+        logger.debug(f"login fail record skipped: {e}")
+
+
+def _clear_login_fail(identifier: str) -> None:
+    try:
+        r = RedisPool.get_redis()
+        r.delete(_fail_key(identifier), _lock_key(identifier))
+    except Exception as e:
+        logger.debug(f"login fail clear skipped: {e}")
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -52,6 +114,8 @@ class UserService:
         if not identifier or not password:
             raise APIException("账号或密码不能为空", code=10001, status_code=400)
 
+        _check_login_lock(identifier)
+
         with SessionLocal() as db:
             email_norm = _normalize_email(identifier)
             # email 命中优先，username 兜底
@@ -64,11 +128,14 @@ class UserService:
                 .first()
             )
             if not user or not verify_password(password, user.hashed_password):
+                _record_login_fail(identifier)
                 raise APIException("账号或密码错误", code=10004, status_code=401)
 
             # is_active 校验（fixed admin 不会被禁，所以无关）
             if user.is_active is False and not user.fixed:
                 raise APIException("账号已停用，请联系管理员", code=10012, status_code=403)
+
+            _clear_login_fail(identifier)
 
             now = datetime.now()
             user.last_login = now
