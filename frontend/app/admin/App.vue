@@ -15,9 +15,9 @@
             <aside class="sidebar">
               <div class="sidebar-brand">
                 <div class="brand-icon">
-                  <img src="/images/logo.png" alt="智慧AI探索平台" style="width: 36px; height: 36px; object-fit: contain;" />
+                  <img src="/images/logo.png" :alt="APP_NAME" style="width: 36px; height: 36px; object-fit: contain;" />
                 </div>
-                <span v-if="!collapsed" class="brand-name">智慧AI <em>探索平台</em></span>
+                <span v-if="!collapsed" class="brand-name">{{ APP_NAME }}</span>
                 <button v-if="!collapsed" class="collapse-toggle" @click="onCollapse(true)" title="收起侧边栏">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 18 9 12 15 6"/>
@@ -201,6 +201,7 @@ import AdminUserDropdown from "./components/AdminUserDropdown.vue"
 import { getIconComponent } from "./shared/icon-library.js"
 import { useKeepAliveStore } from "./stores/keep-alive.js"
 import { useMenuStore } from "./stores/menu.js"
+import { APP_NAME } from "#/shared/app-meta.js"
 
 const showProfileDrawer = ref(false)
 const AdminProfileView = defineAsyncComponent(() => import("./components/AdminProfileView.vue"))

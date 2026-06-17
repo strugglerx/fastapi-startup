@@ -4,8 +4,8 @@
 
     <header class="top-nav">
       <div class="brand">
-        <img class="brand-logo" src="/images/logo.png" alt="智慧AI探索平台 Logo" style="object-fit: contain;" />
-        <span class="brand-text">智慧AI探索平台</span>
+        <img class="brand-logo" src="/images/logo.png" :alt="`${APP_NAME} Logo`" style="object-fit: contain;" />
+        <span class="brand-text">{{ APP_NAME }}</span>
       </div>
       <div class="nav-links">
         <a href="#">文档中心</a>
@@ -24,6 +24,7 @@
 import LoginBackground from "./components/LoginBackground.vue"
 import FeatureShowcase from "./components/FeatureShowcase.vue"
 import LoginCard from "./components/LoginCard.vue"
+import { APP_NAME } from "#/shared/app-meta.js"
 </script>
 
 <style scoped>

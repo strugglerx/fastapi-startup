@@ -3,7 +3,7 @@
     <!-- 欢迎横幅 -->
     <div class="welcome-banner">
       <div class="welcome-banner__content">
-        <h1 class="welcome-title">欢迎使用 智慧AI 探索平台</h1>
+        <h1 class="welcome-title">欢迎使用 {{ APP_NAME }}</h1>
         <p class="welcome-subtitle">您好，管理员！这是专为 AI 辅助开发设计的后台管理工作台，提供快速运维与数据闭环服务。</p>
       </div>
       <div class="welcome-banner__bg-glow"></div>
@@ -153,6 +153,7 @@ import { useRouter } from "vue-router"
 import { fetchRoles } from "../../api/role.js"
 import { fetchMenuList } from "../../api/menu.js"
 import { request } from "../../api/fetch.js"
+import { APP_NAME } from "#/shared/app-meta.js"
 
 defineOptions({ name: "Dashboard" })
 

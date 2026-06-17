@@ -11,7 +11,10 @@
 
 ### 配置
 
-- **`APP_NAME` 环境变量**：新增 `AppConfig.name`（默认 `智慧AI 探索平台`），密码重置邮件的主题/落款改为读取它，便于不同部署实例改品牌名而无需改代码。启动日志会打印 `应用名: ...`。
+- **品牌名统一由 env 驱动**：
+  - 后端 `APP_NAME`（`AppConfig.name`，默认 `智慧AI 探索平台`）— 密码重置邮件主题/落款读取；启动日志打印 `应用名: ...`。
+  - 前端 `VITE_APP_NAME`（`frontend/.env.example`，默认同上）— 浏览器 tab title（admin + login）、登录页品牌名 / 登录标题、admin 侧栏品牌名、dashboard 欢迎横幅全部读取。
+  - 共享读取点：`frontend/app/shared/app-meta.js` 暴露 `APP_NAME` 常量供两个入口复用；`vite.config.js` 用 `loadEnv` 注入 MPA 标题。
 
 ### 安全
 

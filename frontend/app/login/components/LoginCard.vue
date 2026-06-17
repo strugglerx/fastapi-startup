@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="glass-card login-card" ref="loginCard">
       <div class="card-header">
-        <h1 class="login-title">登录智慧AI探索平台</h1>
+        <h1 class="login-title">登录 {{ APP_NAME }}</h1>
         <p class="login-subtitle">
           欢迎回来，进入你的 AI 工作台与探索空间。
         </p>
@@ -118,6 +118,7 @@
 <script setup>
 import { computed, ref, onMounted } from "vue"
 import gsap from "gsap"
+import { APP_NAME } from "#/shared/app-meta.js"
 
 const TOKEN_KEY = "smartai_admin_token"
 const USER_KEY  = "smartai_admin_user"

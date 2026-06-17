@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { MpaPlugin } from "@struggler/vite-plugin-mpa";
 import path from "node:path";
@@ -8,12 +8,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const r = (...p) => path.resolve(__dirname, ...p);
 const backendTarget = "http://127.0.0.1:8000";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // 读取 frontend/.env(.local / .[mode] / .[mode].local) 中的所有变量
+  const env = loadEnv(mode, __dirname, "");
+  const appName = env.VITE_APP_NAME || "智慧AI 探索平台";
+
+  return {
   plugins: [
     vue(),
     MpaPlugin({
       inject: {
-        title: "智慧AI探索平台",
+        title: appName,
       },
     }),
   ],
@@ -51,4 +56,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });
