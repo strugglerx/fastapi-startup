@@ -34,7 +34,7 @@
             <n-button 
               size="small" 
               quaternary 
-              :disabled="form.menuType === 'menu'"
+              :disabled="form.menuType === 'button'"
               @click="openCreateChild"
             >
               新增子节点
@@ -53,13 +53,14 @@
                   v-model:value="form.menuType"
                   :options="[
                     { label: '菜单分组 / 目录 (Category)', value: 'group' },
-                    { label: '实体页面 / 功能 (Menu Page)', value: 'menu' }
+                    { label: '实体页面 / 功能 (Menu Page)', value: 'menu' },
+                    { label: '操作按钮 / 权限标识 (Button / Action)', value: 'button' }
                   ]"
                 />
               </n-form-item>
 
               <n-form-item label="唯一业务标识 (menuKey)" path="menuKey">
-                <n-input v-model:value="form.menuKey" placeholder="例如 system:admin">
+                <n-input v-model:value="form.menuKey" placeholder="例如 system:admin 或 system:admin:create">
                   <template #suffix>
                     <n-button 
                       size="tiny" 
@@ -74,20 +75,20 @@
                 </n-input>
               </n-form-item>
 
-              <n-form-item label="上级菜单 (parentKey)" v-if="form.menuType === 'menu'">
+              <n-form-item label="上级节点 (parentKey)" v-if="form.menuType === 'menu' || form.menuType === 'button'">
                 <n-tree-select
                   v-model:value="form.parentKey"
                   clearable
                   :options="parentTreeOptions"
-                  placeholder="根级菜单"
+                  placeholder="选择上级节点"
                 />
               </n-form-item>
 
-              <n-form-item label="菜单名称 (title)" path="title">
-                <n-input v-model:value="form.title" placeholder="例如 账号管理" />
+              <n-form-item label="菜单名称 / 按钮标题 (title)" path="title">
+                <n-input v-model:value="form.title" placeholder="例如 账号管理 或 新增账号" />
               </n-form-item>
 
-              <n-form-item label="路由路径 / 目录前缀 (path)" path="path">
+              <n-form-item label="路由路径 / 目录前缀 (path)" path="path" v-if="form.menuType !== 'button'">
                 <n-input v-model:value="form.path" placeholder="例如 /system 或 /system/admin" />
               </n-form-item>
 
@@ -203,7 +204,7 @@ const form = reactive({
 watch(
   [() => form.component, () => form.parentKey],
   ([newComp, newParent]) => {
-    if (form.id || !newComp || newComp === "__group__") return
+    if (form.id || !newComp || newComp === "__group__" || newComp === "__button__") return
 
     // 创建新菜单时，智能填充相关配置
     const cleanName = newComp.replace("/index", "")
@@ -250,6 +251,11 @@ watch(
       form.parentKey = null
       form.path = ""
       form.component = "__group__"
+    } else if (newVal === "button") {
+      form.path = ""
+      form.component = "__button__"
+      form.hidden = true
+      form.cacheable = false
     }
   }
 )
@@ -305,7 +311,7 @@ const rules = {
   path: {
     required: true,
     validator: (_rule, value) => {
-      if (form.menuType === "group") {
+      if (form.menuType === "group" || form.menuType === "button") {
         if (!value) return true
         return value.startsWith("/")
       }
@@ -317,7 +323,7 @@ const rules = {
   component: {
     required: true,
     validator: (_rule, value) => {
-      if (form.menuType === "group") return true
+      if (form.menuType === "group" || form.menuType === "button") return true
       if (!value) return false
       return availableComponents.includes(value)
     },
@@ -326,8 +332,21 @@ const rules = {
   },
 }
 
-// 上级树形菜单选项过滤（排除自身，只选类型为 group 分组目录）
+// 上级树形菜单选项过滤（排除自身，根据节点类型过滤可挂载的父节点）
 const parentTreeOptions = computed(() => {
+  if (form.menuType === "button") {
+    // 按钮的父级必须是普通菜单/页面
+    const pages = menus.value.filter(
+      (item) => item.component !== "__group__" && item.component !== "__button__" && item.menuKey !== form.menuKey
+    )
+    return pages.map((item) => ({
+      key: item.menuKey,
+      value: item.menuKey,
+      label: item.title,
+    }))
+  }
+
+  // 菜单页面或子目录的上级必须是目录/分组
   const groups = menus.value.filter(
     (item) => item.component === "__group__" && item.menuKey !== form.menuKey
   )
@@ -381,13 +400,15 @@ const menuTree = computed(() => {
   const map = new Map()
   menus.value.forEach((item) => {
     const isGroup = item.component === "__group__"
+    const isButton = item.component === "__button__"
     map.set(item.menuKey, {
       key: item.menuKey,
       label: item.title,
       isGroup: isGroup,
-      isLeaf: !isGroup,
+      isButton: isButton,
+      isLeaf: isButton, // 按钮是叶子节点，不能有子节点（menu 类型根据实际子节点决定）
       raw: item,
-      children: isGroup ? [] : undefined,
+      children: isButton ? undefined : [], // 目录与菜单可以有子节点
     })
   })
   const roots = []
@@ -410,6 +431,25 @@ const menuTree = computed(() => {
     })
   }
   sortRec(roots)
+
+  // 后处理：没有子节点的非 group 节点标记为叶子，去掉多余的展开三角
+  const finalizeLeaf = (nodes) => {
+    nodes.forEach((node) => {
+      if (node.children !== undefined) {
+        if (node.children.length === 0) {
+          // 没有子节点：如果是 group 保留空 children（可新增子节点），否则标为叶子
+          if (!node.isGroup) {
+            node.isLeaf = true
+            node.children = undefined
+          }
+        } else {
+          finalizeLeaf(node.children)
+        }
+      }
+    })
+  }
+  finalizeLeaf(roots)
+
   return roots
 })
 
@@ -423,7 +463,7 @@ function selectNode(rawNode) {
   form.title = rawNode.title
   form.path = rawNode.path
   form.component = rawNode.component
-  form.menuType = rawNode.component === "__group__" ? "group" : "menu"
+  form.menuType = rawNode.component === "__group__" ? "group" : (rawNode.component === "__button__" ? "button" : "menu")
   form.icon = rawNode.icon || "default"
   form.sort = rawNode.sort || 0
   form.hidden = Boolean(rawNode.hidden)
@@ -467,11 +507,21 @@ function openCreateRoot() {
 function openCreateChild() {
   if (!selectedNode.value) return
   const parentKey = selectedNode.value.menuKey
+  const parentComp = selectedNode.value.raw.component
+  
   resetForm()
   form.parentKey = parentKey
-  form.title = "新子菜单"
-  form.path = "/"
-  form.component = ""
+  if (parentComp !== "__group__" && parentComp !== "__button__") {
+    // 父级是普通菜单页面，子级自动填充为操作按钮
+    form.menuType = "button"
+    form.component = "__button__"
+    form.hidden = true
+    form.title = "新操作按钮"
+  } else {
+    // 父级是目录，子级为菜单页面
+    form.menuType = "menu"
+    form.title = "新子菜单"
+  }
 }
 
 function generateRandomKeySuffix() {
@@ -505,12 +555,12 @@ async function handleSave() {
     menuKey: form.menuKey,
     parentKey: form.parentKey,
     title: form.title,
-    path: form.path || (form.menuType === "group" ? `/group:${form.menuKey}` : "/"),
-    component: form.menuType === "group" ? "__group__" : form.component,
+    path: form.menuType === "group" ? `/group:${form.menuKey}` : (form.menuType === "button" ? "" : form.path),
+    component: form.menuType === "group" ? "__group__" : (form.menuType === "button" ? "__button__" : form.component),
     icon: form.icon,
     sort: form.sort,
-    hidden: form.hidden,
-    cacheable: form.cacheable,
+    hidden: form.menuType === "button" ? true : form.hidden,
+    cacheable: form.menuType === "button" ? false : form.cacheable,
     enabled: form.enabled,
   }
   
@@ -558,39 +608,64 @@ async function handleDelete() {
   }
 }
 
+// 目录图标：VSCode 风格蓝色描边文件夹
 const FolderIcon = () => h('svg', {
-  width: '14',
-  height: '14',
+  width: '15',
+  height: '15',
   viewBox: '0 0 24 24',
   fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: '2',
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  style: 'margin-right: 6px; color: var(--c-brand); vertical-align: -2px; display: inline-block; flex-shrink: 0;'
+  style: 'margin-right: 6px; vertical-align: -2px; display: inline-block; flex-shrink: 0;'
 }, [
-  h('path', { d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' })
+  h('path', {
+    d: 'M3 7a2 2 0 0 1 2-2h4.172a2 2 0 0 1 1.414.586l1.414 1.414A2 2 0 0 0 13.414 7.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z',
+    fill: 'none',
+    stroke: '#6cb3f0',
+    strokeWidth: '1.6',
+    strokeLinejoin: 'round'
+  })
 ])
 
+// 页面图标：VSCode 风格灰色描边文件
 const FileIcon = () => h('svg', {
   width: '14',
   height: '14',
   viewBox: '0 0 24 24',
   fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: '2',
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  style: 'margin-right: 6px; color: var(--c-text-secondary); vertical-align: -2px; display: inline-block; flex-shrink: 0;'
+  style: 'margin-right: 6px; vertical-align: -2px; display: inline-block; flex-shrink: 0;'
 }, [
-  h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
-  h('polyline', { points: '14 2 14 8 20 8' })
+  h('path', {
+    d: 'M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7-7z',
+    fill: 'none',
+    stroke: '#c5c5c5',
+    strokeWidth: '1.6',
+    strokeLinejoin: 'round'
+  }),
+  h('path', {
+    d: 'M13 2v7h7',
+    fill: 'none',
+    stroke: '#c5c5c5',
+    strokeWidth: '1.6',
+    strokeLinejoin: 'round'
+  })
+])
+
+// 按钮/权限图标：橙色描边圆角矩形
+const ButtonIcon = () => h('svg', {
+  width: '15',
+  height: '15',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  style: 'margin-right: 6px; vertical-align: -2px; display: inline-block; flex-shrink: 0;'
+}, [
+  h('rect', { x: '2', y: '6', width: '20', height: '12', rx: '3', fill: 'none', stroke: '#f0a020', strokeWidth: '1.8' }),
+  h('path', { d: 'M8 12h8', stroke: '#f0a020', strokeWidth: '1.8', strokeLinecap: 'round' })
 ])
 
 function renderLabel({ option }) {
   const isEnabled = option.raw?.enabled !== false
   const isHidden = option.raw?.hidden === true
   const isGroup = option.isGroup
+  const isButton = option.isButton
   
   return h("span", { 
     class: "menu-tree-label",
@@ -601,15 +676,16 @@ function renderLabel({ option }) {
       whiteSpace: "nowrap"
     }
   }, [
-    isGroup ? FolderIcon() : FileIcon(),
+    isGroup ? FolderIcon() : (isButton ? ButtonIcon() : FileIcon()),
     h("span", { 
       style: {
         color: !isEnabled ? "var(--c-text-faint)" : "inherit",
         textDecoration: !isEnabled ? "line-through" : "none"
       }
     }, option.label),
+    isButton ? h(NTag, { size: "tiny", bordered: false, type: "warning", style: "margin-left: 6px" }, { default: () => option.raw.menuKey }) : null,
     !isEnabled ? h(NTag, { size: "tiny", bordered: false, type: "error", style: "margin-left: 6px" }, { default: () => "禁用" }) : null,
-    isHidden ? h(NTag, { size: "tiny", bordered: false, type: "default", style: "margin-left: 6px" }, { default: () => "隐藏" }) : null,
+    (isHidden && !isButton) ? h(NTag, { size: "tiny", bordered: false, type: "default", style: "margin-left: 6px" }, { default: () => "隐藏" }) : null,
   ])
 }
 </script>

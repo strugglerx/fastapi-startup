@@ -15,7 +15,6 @@
 - 📋 **操作审计与 IP 缓存** - 异步记录用户增删改等关键写操作审计日志，并结合 L1(内存)+L2(Redis) 缓存自动解析 IP 归属地
 - 🗂️ **统一文件 & 数据字典** - 本地 MD5 去重秒传文件服务 + 多级字典联动配置管理
 - 🎨 **高效 ProTable 封装** - 前端 Naive UI 列表 CRUD 统一高阶封装，支持全配置化 Schema 渲染搜索、列表及表单
-- ⚡ **CLI 一键代码生成** - 提供 `hack/codegen.py`，一键自动打通 Model、Service、Router、API 请求与前端 ProTable 视图
 - 🐳 **Docker 统一容器化** - 提供根目录下的多阶段构建 `Dockerfile` 及一键部署 `App + MySQL + Redis` 的 `docker-compose.yml`
 - 🌏 **时区一致性** - 后端 Python、MySQL 数据与前端展示统一使用 Asia/Shanghai (UTC+8) 时区
 

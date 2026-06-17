@@ -27,7 +27,9 @@
           :placeholder="field.placeholder || `请输入${field.label}...`"
           @input="handleSearch"
           class="toolbar-search"
-        />
+        >
+          <template #prefix><span class="search-icon" /></template>
+        </n-input>
         <n-select
           v-else-if="field.type === 'select'"
           v-model:value="filters[field.key]"
@@ -128,7 +130,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, h } from 'vue'
-import { useDialog, useMessage, NButton } from 'naive-ui'
+import { useDialog, useMessage, NButton, NSpace } from 'naive-ui'
 import AdminPageHeader from './AdminPageHeader.vue'
 
 const props = defineProps({
@@ -206,7 +208,7 @@ const tableColumns = computed(() => {
     customCols.push({
       title: '操作',
       key: 'actions',
-      width: 150,
+      width: 160,
       render(row) {
         const actionButtons = []
         
@@ -215,10 +217,8 @@ const tableColumns = computed(() => {
             h(
               NButton,
               {
-                size: 'tiny',
-                type: 'primary',
-                ghost: true,
-                style: 'margin-right: 8px',
+                size: 'small',
+                quaternary: true,
                 onClick: () => openEdit(row)
               },
               { default: () => '编辑' }
@@ -231,9 +231,9 @@ const tableColumns = computed(() => {
             h(
               NButton,
               {
-                size: 'tiny',
+                size: 'small',
+                quaternary: true,
                 type: 'error',
-                ghost: true,
                 onClick: () => handleDelete(row)
               },
               { default: () => '删除' }
@@ -241,7 +241,7 @@ const tableColumns = computed(() => {
           )
         }
         
-        return h('div', { class: 'action-buttons' }, actionButtons)
+        return h(NSpace, { size: 6 }, { default: () => actionButtons })
       }
     })
   }
@@ -421,34 +421,82 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-toolbar {
+.admin-page {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 14px;
-  background: var(--card-bg, rgba(255, 255, 255, 0.6));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
-  border-radius: 8px;
+  flex-direction: column;
+  gap: var(--sp-4, 16px);
 }
 
 .toolbar-search {
-  max-width: 260px;
+  flex: 2;
+  min-width: 220px;
+  max-width: 320px;
 }
 
 .toolbar-select {
-  width: 160px;
+  flex: 1;
+  min-width: 140px;
+  max-width: 180px;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 8px;
+.toolbar-btn {
+  flex-shrink: 0;
 }
+
+.search-icon {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--c-text-faint, #9ca3af);
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+}
+
+.search-icon::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 2px;
+  right: -6px;
+  bottom: -4px;
+  border-radius: 2px;
+  background: var(--c-text-faint, #9ca3af);
+  transform: rotate(45deg);
+}
+
+.admin-data-shell {
+  padding: var(--sp-3, 12px) var(--sp-4, 16px) var(--sp-4, 16px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-data-shell :deep(.n-data-table) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-data-shell :deep(.n-data-table-wrapper) {
+  flex: 1;
+  min-height: 240px;
+}
+
+.admin-data-shell :deep(.n-pagination) {
+  margin-top: var(--sp-3, 12px);
+  padding: var(--sp-1, 4px) var(--sp-1, 4px) var(--sp-1, 4px);
+  justify-content: flex-end;
+}
+
+/* action-buttons 由 NSpace 替代，保留空规则兼容旧引用 */
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--sp-2, 8px);
+}
+
+:global(.admin-account-modal) {
+  width: min(520px, calc(100vw - 32px));
 }
 </style>

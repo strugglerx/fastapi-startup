@@ -23,17 +23,9 @@ export function hasPermission(permission) {
       return false
     }
     
-    // 支持权限等级继承：如校验 system:admin:create，若用户已授权主菜单 system:admin 即可通过
+    // 支持精确权限匹配：如校验 system:admin:create，用户必须拥有显式授权的该标识才可通过
     if (user.permissions.includes(permission)) {
       return true
-    }
-    
-    if (permission.includes(":")) {
-      const parts = permission.split(":")
-      const parentPermission = parts.slice(0, -1).join(":")
-      if (user.permissions.includes(parentPermission)) {
-        return true
-      }
     }
     
     return false

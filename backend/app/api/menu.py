@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/menu", tags=["动态菜单"])
 
 class PageMetaReq(BaseModel):
     menuKey: str = Field(..., min_length=1, max_length=128)
-    path: str = Field(..., min_length=1, max_length=255)
+    path: str = Field("", max_length=255)
     component: str = Field(..., min_length=1, max_length=255)
     cacheable: bool = False
     parentKey: Optional[str] = None
@@ -29,7 +29,7 @@ class PageMetaReq(BaseModel):
         v = (v or "").strip()
         if not v:
             raise ValueError("组件路径不能为空")
-        if v == "__group__":
+        if v in ("__group__", "__button__"):
             return v
         import re
         if not re.match(r"^[a-zA-Z0-9_\-/]+$", v):
@@ -144,7 +144,7 @@ class MenuReq(BaseModel):
     menuKey: str = Field(..., min_length=1, max_length=128)
     parentKey: Optional[str] = Field(None, max_length=128)
     title: str = Field(..., min_length=1, max_length=128)
-    path: str = Field(..., min_length=1, max_length=255)
+    path: str = Field("", max_length=255)
     component: str = Field(..., min_length=1, max_length=255)
     icon: Optional[str] = Field(None, max_length=64)
     sort: int = 0
@@ -158,7 +158,7 @@ class MenuReq(BaseModel):
         v = (v or "").strip()
         if not v:
             raise ValueError("组件路径不能为空")
-        if v == "__group__":
+        if v in ("__group__", "__button__"):
             return v
         import re
         if not re.match(r"^[a-zA-Z0-9_\-/]+$", v):

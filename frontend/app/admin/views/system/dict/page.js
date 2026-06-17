@@ -9,4 +9,9 @@ export default definePage({
   icon: "BookOpen",
   sort: 16,
   cacheable: false,
+  buttons: [
+    { menuKey: "system:dict:create", title: "新建字典", sort: 1 },
+    { menuKey: "system:dict:update", title: "修改字典", sort: 2 },
+    { menuKey: "system:dict:delete", title: "删除字典", sort: 3 },
+  ]
 })

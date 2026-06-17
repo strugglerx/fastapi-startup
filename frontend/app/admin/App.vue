@@ -195,7 +195,7 @@ import {
   zhCN,
   dateZhCN,
 } from "naive-ui"
-import { http } from "./api/http.js"
+import { request } from "./api/fetch.js"
 import { clearToken, getToken, setToken } from "./api/base.js"
 import AdminUserDropdown from "./components/AdminUserDropdown.vue"
 import { getIconComponent } from "./shared/icon-library.js"
@@ -220,19 +220,13 @@ function loadCachedUser() {
 async function refreshCurrentUser() {
   if (!getToken()) return
   try {
-    const res = await http.get("/api/v1/auth/me")
-    const user = res.data?.data ?? res.data
+    const user = await request.get("/api/v1/auth/me")
     if (user && user.id) {
       currentUser.value = user
       localStorage.setItem(USER_KEY, JSON.stringify(user))
     }
-  } catch (error) {
-    if (error?.response?.status === 401 || error?.response?.status === 403) {
-      clearToken()
-      localStorage.removeItem(USER_KEY)
-      currentUser.value = null
-      window.location.assign("/login/")
-    }
+  } catch {
+    // 401 由 fetch.js 拦截器统一处理（跳登录 + 清 token）
   }
 }
 
@@ -504,7 +498,7 @@ function navigate(key) {
 
 async function handleLogout() {
   try {
-    await http.post("/api/v1/auth/logout")
+    await request.post("/api/v1/auth/logout")
   } catch {
     /* local cleanup is authoritative */
   }

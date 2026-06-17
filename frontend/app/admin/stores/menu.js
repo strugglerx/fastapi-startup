@@ -1,7 +1,9 @@
 import { computed, ref } from "vue"
-import { fetchMenuList, syncMenus } from "../api/menu.js"
+import { fetchMenuList } from "../api/menu.js"
+import { silentRequest } from "../api/fetch.js"
 import { registerDynamicRoutes } from "../router/dynamic.js"
 import { getLocalPages } from "../shared/page-registry.js"
+
 
 const registered = ref(false)
 const rawList = ref([])
@@ -29,25 +31,23 @@ function toTree(items) {
   return roots
 }
 
-async function autoSync() {
-  const pages = getLocalPages()
-  if (!pages.length) return
-  try {
-    const result = await syncMenus(pages)
-    if (result) console.info("[menu] auto-sync", result)
-  } catch (e) {
-    // 生产环境若配了 SYNC_TOKEN，前端无 token 会 403 —— 此时降级，只读 DB
-    console.warn("[menu] auto-sync skipped:", e?.response?.status || e?.message || e)
-  }
-}
-
 async function load() {
   if (registered.value) return
   if (_loading) return _loading
 
   _loading = (async () => {
-    await autoSync()
-    const list = await fetchMenuList()
+    let list = await fetchMenuList()
+
+    // 菜单表为空（首次部署）→ 自动同步一次，失败则静默跳过
+    if (list.length === 0) {
+      try {
+        await silentRequest.post("/api/menu/sync", { pages: getLocalPages() })
+        list = await fetchMenuList()
+      } catch {
+        // 非 admin 用户或后端拒绝时静默忽略，加载空菜单继续
+      }
+    }
+
     rawList.value = list
     tree.value = toTree(list.filter((item) => !item.hidden))
     registerDynamicRoutes(list)

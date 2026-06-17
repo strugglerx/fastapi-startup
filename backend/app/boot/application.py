@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
         from app.service import MenuService, RoleService, UserService
         RoleService.ensure_seed_roles()
         MenuService.ensure_source_migration()
+        MenuService.ensure_seed_menus()   # 首次部署：菜单表为空时自动写入内置菜单
         r = UserService.ensure_seed_admin()
         if r.get("created"):
             logger.warning(

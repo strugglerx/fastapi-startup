@@ -53,5 +53,6 @@ export function definePage(meta) {
     sort: meta.sort ?? 9999,
     hidden: meta.hidden ?? false,
     cacheable: meta.cacheable ?? false,
+    buttons: Array.isArray(meta.buttons) ? meta.buttons : [],
   }
 }

@@ -229,7 +229,7 @@ function buildTree(items, adminMode) {
     map.set(item.menuKey, {
       key: item.menuKey,
       label: item.title,
-      disabled: adminMode || Boolean(item.hidden),
+      disabled: adminMode,
       raw: item,
       children: [],
     })
@@ -240,15 +240,37 @@ function buildTree(items, adminMode) {
     if (parentKey && map.has(parentKey)) map.get(parentKey).children.push(node)
     else roots.push(node)
   })
+
+  // 递归处理：没有子节点的节点，移除 children 属性以隐藏三角展开图标
+  const cleanRec = (nodes) => {
+    nodes.forEach((node) => {
+      if (!node.children || node.children.length === 0) {
+        delete node.children
+      } else {
+        cleanRec(node.children)
+      }
+    })
+  }
+  cleanRec(roots)
+
   const sortRec = (nodes) => {
     nodes.sort((a, b) => (a.raw.sort || 0) - (b.raw.sort || 0))
-    nodes.forEach((node) => sortRec(node.children))
+    nodes.forEach((node) => {
+      if (node.children) sortRec(node.children)
+    })
   }
   sortRec(roots)
   return roots
 }
 
 function renderLabel({ option }) {
+  const isButton = option.raw?.component === "__button__"
+  if (isButton) {
+    return h("span", { style: "display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;" }, [
+      h("span", { style: "color: #e08c00; font-weight: 500;" }, option.label),
+      h(NTag, { size: "tiny", bordered: false, type: "warning" }, { default: () => option.raw.menuKey }),
+    ])
+  }
   if (!option.raw?.hidden) return option.label
   return h("span", { class: "role-tree-label role-tree-label--muted" }, [
     h("span", option.label),

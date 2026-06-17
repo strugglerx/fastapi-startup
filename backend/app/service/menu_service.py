@@ -142,61 +142,180 @@ class MenuService:
             "title": "控制台",
             "icon": "LayoutDashboard",
             "parentKey": None,
+            "path": "/dashboard",
+            "component": "dashboard/index",
             "sort": 1,
-        },
-        "profile": {
-            "title": "个人中心",
-            "icon": "User",
-            "parentKey": None,
-            "sort": 2,
+            "cacheable": True,
         },
         "system:admin": {
             "title": "账号管理",
             "icon": "Users",
             "parentKey": "g:system",
+            "path": "/system/admin",
+            "component": "system/admin/index",
             "sort": 10,
+            "cacheable": True,
+        },
+        "system:admin:create": {
+            "title": "新建账号",
+            "parentKey": "system:admin",
+            "component": "__button__",
+            "sort": 1,
+            "hidden": True,
+        },
+        "system:admin:update": {
+            "title": "修改账号",
+            "parentKey": "system:admin",
+            "component": "__button__",
+            "sort": 2,
+            "hidden": True,
+        },
+        "system:admin:delete": {
+            "title": "删除账号",
+            "parentKey": "system:admin",
+            "component": "__button__",
+            "sort": 3,
+            "hidden": True,
+        },
+        "system:admin:password": {
+            "title": "重置密码",
+            "parentKey": "system:admin",
+            "component": "__button__",
+            "sort": 4,
+            "hidden": True,
         },
         "system:role": {
             "title": "角色与权限",
             "icon": "Shield",
             "parentKey": "g:system",
+            "path": "/system/role",
+            "component": "system/role/index",
             "sort": 11,
+        },
+        "system:role:create": {
+            "title": "新建角色",
+            "parentKey": "system:role",
+            "component": "__button__",
+            "sort": 1,
+            "hidden": True,
+        },
+        "system:role:update": {
+            "title": "修改角色",
+            "parentKey": "system:role",
+            "component": "__button__",
+            "sort": 2,
+            "hidden": True,
+        },
+        "system:role:delete": {
+            "title": "删除角色",
+            "parentKey": "system:role",
+            "component": "__button__",
+            "sort": 3,
+            "hidden": True,
+        },
+        "system:role:grant": {
+            "title": "角色授权",
+            "parentKey": "system:role",
+            "component": "__button__",
+            "sort": 4,
+            "hidden": True,
         },
         "system:menu": {
             "title": "菜单管理",
             "icon": "Settings",
             "parentKey": "g:system",
+            "path": "/system/menu",
+            "component": "system/menu/index",
             "sort": 12,
+            "cacheable": True,
+        },
+        "system:menu:create": {
+            "title": "新建菜单",
+            "parentKey": "system:menu",
+            "component": "__button__",
+            "sort": 1,
+            "hidden": True,
+        },
+        "system:menu:update": {
+            "title": "修改菜单",
+            "parentKey": "system:menu",
+            "component": "__button__",
+            "sort": 2,
+            "hidden": True,
+        },
+        "system:menu:delete": {
+            "title": "删除菜单",
+            "parentKey": "system:menu",
+            "component": "__button__",
+            "sort": 3,
+            "hidden": True,
         },
         "system:settings": {
             "title": "系统设置",
             "icon": "Settings",
             "parentKey": "g:system",
+            "path": "/system/settings",
+            "component": "system/settings/index",
             "sort": 13,
         },
         "system:audit": {
             "title": "审计日志",
             "icon": "FileText",
             "parentKey": "g:system",
+            "path": "/system/audit",
+            "component": "system/audit/index",
             "sort": 14,
         },
         "system:file": {
             "title": "文件管理",
             "icon": "FolderOpen",
             "parentKey": "g:system",
+            "path": "/system/file",
+            "component": "system/file/index",
             "sort": 15,
+        },
+        "system:file:upload": {
+            "title": "上传文件",
+            "parentKey": "system:file",
+            "component": "__button__",
+            "sort": 1,
+            "hidden": True,
+        },
+        "system:file:delete": {
+            "title": "删除文件",
+            "parentKey": "system:file",
+            "component": "__button__",
+            "sort": 2,
+            "hidden": True,
         },
         "system:dict": {
             "title": "数据字典",
             "icon": "BookOpen",
             "parentKey": "g:system",
+            "path": "/system/dict",
+            "component": "system/dict/index",
             "sort": 16,
         },
-        "system:product": {
-            "title": "产品管理",
-            "icon": "Grid",
-            "parentKey": "g:system",
-            "sort": 17,
+        "system:dict:create": {
+            "title": "新建字典",
+            "parentKey": "system:dict",
+            "component": "__button__",
+            "sort": 1,
+            "hidden": True,
+        },
+        "system:dict:update": {
+            "title": "修改字典",
+            "parentKey": "system:dict",
+            "component": "__button__",
+            "sort": 2,
+            "hidden": True,
+        },
+        "system:dict:delete": {
+            "title": "删除字典",
+            "parentKey": "system:dict",
+            "component": "__button__",
+            "sort": 3,
+            "hidden": True,
         },
     }
 
@@ -299,17 +418,19 @@ class MenuService:
                 if row is None:
                     # 如果是新页面，优先使用传入的初始属性，其次使用默认内置核心页面配置，最后使用回落默认值
                     core_meta = cls.DEFAULT_CORE_MENUS.get(menu_key)
-                    parent_key = page["parentKey"] or (core_meta["parentKey"] if core_meta else None)
-                    title = page["title"] or (core_meta["title"] if core_meta else menu_key)
-                    icon = page["icon"] or (core_meta["icon"] if core_meta else None)
-                    
+                    parent_key = page["parentKey"] or (core_meta.get("parentKey") if core_meta else None)
+                    title = page["title"] or (core_meta.get("title") if core_meta else menu_key) or menu_key
+                    icon = page["icon"] or (core_meta.get("icon") if core_meta else None)
+
                     sort = page["sort"]
                     if sort is None:
-                        sort = core_meta["sort"] if core_meta else 9999
-                        
+                        sort = core_meta.get("sort") if core_meta else 9999
+                        if sort is None:
+                            sort = 9999
+
                     hidden = page["hidden"]
                     if hidden is None:
-                        hidden = False
+                        hidden = core_meta.get("hidden", False) if core_meta else False
 
                     # 默认情况下，新同步的页面（如新开发的页面）处于禁用状态，供管理员在菜单管理中自行配置并启用
                     # 仅控制台与核心内置菜单默认启用，以确保基础入口可用
@@ -432,6 +553,54 @@ class MenuService:
             return _menu_to_dict(row)
 
     @classmethod
+    def ensure_seed_menus(cls):
+        """首次部署时自动写入内置菜单（菜单表中没有任何 source=code 菜单时执行）。"""
+        with SessionLocal() as db:
+            has_code = db.query(SysMenu).filter(SysMenu.source == "code").first()
+            if has_code:
+                return  # 已有菜单，不重复 seed
+
+            from app.boot.logger import logger
+            # 先创建分组
+            for key, meta in cls.DEFAULT_CORE_GROUPS.items():
+                if not db.query(SysMenu).filter(SysMenu.menu_key == key).first():
+                    db.add(SysMenu(
+                        menu_key=key,
+                        parent_key=None,
+                        title=meta["title"],
+                        path="",
+                        component=cls.GROUP_COMPONENT,
+                        icon=meta.get("icon"),
+                        sort=meta.get("sort", 90),
+                        hidden=False,
+                        cacheable=False,
+                        source="ui",
+                        enabled=True,
+                    ))
+            db.flush()
+
+            # 再创建页面和按钮
+            for key, meta in cls.DEFAULT_CORE_MENUS.items():
+                if db.query(SysMenu).filter(SysMenu.menu_key == key).first():
+                    continue
+                db.add(SysMenu(
+                    menu_key=key,
+                    parent_key=meta.get("parentKey"),
+                    title=meta.get("title", key),
+                    path=meta.get("path", ""),
+                    component=meta.get("component", ""),
+                    icon=meta.get("icon"),
+                    sort=meta.get("sort", 9999),
+                    hidden=bool(meta.get("hidden", False)),
+                    cacheable=bool(meta.get("cacheable", False)),
+                    source="code",
+                    enabled=True,
+                ))
+
+            db.commit()
+            logger.info(f"✓ 已写入内置菜单 seed（{len(cls.DEFAULT_CORE_MENUS)} 条）")
+
+    @classmethod
     def ensure_source_migration(cls):
         """一次性迁移：把现存分组标记为 ui，其余保持 code。"""
         with SessionLocal() as db:
@@ -461,8 +630,18 @@ class MenuService:
         ).first()
         if not parent:
             raise APIException("父级菜单不存在或已禁用", code=61016, status_code=400)
-        if parent.component != cls.GROUP_COMPONENT:
-            raise APIException("只能挂载到分组下", code=61017, status_code=400)
+            
+        current_node = db.query(SysMenu).filter(SysMenu.menu_key == menu_key).first()
+        current_comp = current_node.component if current_node else None
+        
+        is_button = (current_comp == "__button__") or (":" in menu_key and len(menu_key.split(":")) >= 3)
+        
+        if is_button:
+            if parent.component == "__button__":
+                raise APIException("按钮不能挂载在按钮下", code=61017, status_code=400)
+        else:
+            if parent.component != cls.GROUP_COMPONENT:
+                raise APIException("页面或分组只能挂载在分组下", code=61017, status_code=400)
 
         cursor = parent
         visited = set()

@@ -9,4 +9,8 @@ export default definePage({
   icon: "FolderOpen",
   sort: 15,
   cacheable: false,
+  buttons: [
+    { menuKey: "system:file:upload", title: "上传文件", sort: 1 },
+    { menuKey: "system:file:delete", title: "删除文件", sort: 2 },
+  ]
 })

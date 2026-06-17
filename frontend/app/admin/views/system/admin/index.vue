@@ -138,7 +138,7 @@ import {
   useMessage,
 } from "naive-ui"
 import { fetchRoles } from "../../../api/role.js"
-import { http } from "../../../api/http.js"
+import { request } from "../../../api/fetch.js"
 import { hasPermission } from "../../../shared/auth.js"
 import AdminPageHeader from "../../../components/AdminPageHeader.vue"
 
@@ -277,10 +277,6 @@ onMounted(async () => {
   await loadRows()
 })
 
-function unwrap(res) {
-  return res.data?.data ?? res.data ?? {}
-}
-
 function readCurrentUser() {
   try {
     return JSON.parse(localStorage.getItem("smartai_admin_user") || "null") || {}
@@ -311,11 +307,11 @@ function buildParams() {
 async function loadRows() {
   loading.value = true
   try {
-    const data = unwrap(await http.get(ADMIN_ENDPOINT, { params: buildParams() }))
+    const data = await request.get(ADMIN_ENDPOINT, buildParams())
     rows.value = data.items ?? data.list ?? []
     pagination.itemCount = data.total ?? rows.value.length
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "加载账号列表失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   } finally {
     loading.value = false
   }
@@ -389,12 +385,12 @@ async function submitCreate() {
   }
   saving.value = true
   try {
-    await http.post(ADMIN_ENDPOINT, { ...createForm })
+    await request.post(ADMIN_ENDPOINT, { ...createForm })
     message.success("账号已创建")
     showCreate.value = false
     loadRows()
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "创建账号失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   } finally {
     saving.value = false
   }
@@ -409,15 +405,15 @@ async function submitEdit() {
   if (!editTarget.value) return
   saving.value = true
   try {
-    await http.put(`${ADMIN_ENDPOINT}/${editTarget.value.id}`, {
+    await request.put(`${ADMIN_ENDPOINT}/${editTarget.value.id}`, {
       username: editForm.username,
       email: editForm.email,
     })
     message.success("账号已保存")
     showEdit.value = false
     loadRows()
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "保存账号失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   } finally {
     saving.value = false
   }
@@ -432,13 +428,13 @@ async function submitReset() {
   if (!resetTarget.value) return
   saving.value = true
   try {
-    await http.post(`${ADMIN_ENDPOINT}/${resetTarget.value.id}/reset-password`, {
+    await request.post(`${ADMIN_ENDPOINT}/${resetTarget.value.id}/reset-password`, {
       new_password: resetForm.password,
     })
     message.success("密码已重置")
     showReset.value = false
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "重置密码失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   } finally {
     saving.value = false
   }
@@ -452,12 +448,12 @@ async function submitRole() {
   }
   saving.value = true
   try {
-    await http.put(`${ADMIN_ENDPOINT}/${roleTarget.value.id}`, { role: roleForm.role })
+    await request.put(`${ADMIN_ENDPOINT}/${roleTarget.value.id}`, { role: roleForm.role })
     message.success("角色已更新")
     showRole.value = false
     loadRows()
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "更新角色失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   } finally {
     saving.value = false
   }
@@ -465,11 +461,10 @@ async function submitRole() {
 
 async function updateActive(row, value) {
   try {
-    await http.put(`${ADMIN_ENDPOINT}/${row.id}`, { is_active: value })
+    await request.put(`${ADMIN_ENDPOINT}/${row.id}`, { is_active: value })
     row.is_active = value
     message.success(value ? "账号已启用" : "账号已禁用")
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "更新状态失败")
+  } catch {
     loadRows()
   }
 }
@@ -486,11 +481,11 @@ function confirmDelete(row) {
 
 async function softDelete(row) {
   try {
-    await http.delete(`${ADMIN_ENDPOINT}/${row.id}`)
+    await request.delete(`${ADMIN_ENDPOINT}/${row.id}`)
     message.success("账号已删除")
     loadRows()
-  } catch (error) {
-    message.error(error?.response?.data?.msg || error?.message || "删除账号失败")
+  } catch {
+    // 错误由 fetch.js 拦截器展示
   }
 }
 </script>

@@ -152,7 +152,7 @@ import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { fetchRoles } from "../../api/role.js"
 import { fetchMenuList } from "../../api/menu.js"
-import { http } from "../../api/http.js"
+import { request } from "../../api/fetch.js"
 
 defineOptions({ name: "Dashboard" })
 
@@ -170,11 +170,11 @@ async function loadDashboardStats() {
     const [roles, menus, adminsRes] = await Promise.all([
       fetchRoles().catch(() => []),
       fetchMenuList().catch(() => []),
-      http.get("/api/v1/admins", { params: { size: 1 } }).catch(() => null)
+      request.get("/api/v1/admins", { size: 1 }).catch(() => null)
     ])
     rolesCount.value = roles.length
     menusCount.value = menus.length
-    adminsCount.value = adminsRes?.data?.data?.total ?? adminsRes?.data?.total ?? 0
+    adminsCount.value = adminsRes?.total ?? 0
   } catch (error) {
     console.error("加载工作台仪表盘指标失败", error)
   } finally {

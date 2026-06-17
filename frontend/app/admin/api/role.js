@@ -1,35 +1,31 @@
 import { ref } from "vue"
-import { http } from "./http.js"
+import { request } from "./fetch.js"
 
 const _cache = ref([])
 let _loaded = false
 
-function unwrap(res) {
-  return res.data?.data ?? res.data
-}
-
 export function fetchRoles() {
-  return http.get("/api/v1/role").then((r) => unwrap(r))
+  return request.get("/api/v1/role")
 }
 
 export function createRole(payload) {
-  return http.post("/api/v1/role", payload).then((r) => {
+  return request.post("/api/v1/role", payload).then((data) => {
     invalidateRoles()
-    return unwrap(r)
+    return data
   })
 }
 
 export function updateRole(id, payload) {
-  return http.put(`/api/v1/role/${id}`, payload).then((r) => {
+  return request.put(`/api/v1/role/${id}`, payload).then((data) => {
     invalidateRoles()
-    return unwrap(r)
+    return data
   })
 }
 
 export function deleteRole(id) {
-  return http.delete(`/api/v1/role/${id}`).then((r) => {
+  return request.delete(`/api/v1/role/${id}`).then((data) => {
     invalidateRoles()
-    return unwrap(r)
+    return data
   })
 }
 

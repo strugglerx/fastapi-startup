@@ -101,3 +101,6 @@ export const request = new Fetch()
 
 /** 给登录页用的实例：401 不跳转（避免密码错误触发跳转） */
 export const publicRequest = new Fetch({ withToken: false, skipAuthRedirect: true })
+
+/** 静默实例：不弹错误 toast，不跳登录（用于后台自动请求） */
+export const silentRequest = new Fetch({ silent: true, skipAuthRedirect: true })
