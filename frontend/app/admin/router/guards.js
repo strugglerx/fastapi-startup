@@ -13,9 +13,14 @@ function isAdminUser() {
   return false
 }
 
-function firstAuthorizedPath(menu) {
-  const item = menu.rawList.value.find((m) => m.component !== "__group__" && m.path)
-  return item ? item.path : null
+function firstAuthorizedPath(menu, { excludeAdminOnly = false } = {}) {
+  for (const m of menu.rawList.value) {
+    if (m.component === "__group__") continue
+    if (!m.path) continue
+    if (excludeAdminOnly && ADMIN_ONLY_PATHS.has(m.path)) continue
+    return m.path
+  }
+  return null
 }
 
 export function setupGuards(router) {
@@ -39,18 +44,24 @@ export function setupGuards(router) {
       }
     }
 
-    // 非 admin 不允许进 admin-only 路径
-    if (ADMIN_ONLY_PATHS.has(to.path) && !isAdminUser()) {
-      const fallback = firstAuthorizedPath(menu)
-      return fallback ? { path: fallback } : { path: "/404" }
+    const admin = isAdminUser()
+
+    // 非 admin 撞到 admin-only 路径——跳"第一个非 admin-only 授权菜单"，
+    // 没有就停在 /404，避免回到自己造成无限重定向
+    if (ADMIN_ONLY_PATHS.has(to.path) && !admin) {
+      const fallback = firstAuthorizedPath(menu, { excludeAdminOnly: true })
+      if (!fallback) return to.path === "/404" ? true : { path: "/404" }
+      return { path: fallback }
     }
 
-    // /、/404 入口跳到当前用户第一个授权菜单（admin 通常是 dashboard）
+    // /、/404 入口跳到当前用户第一个可访问菜单（admin 可走 admin-only，非 admin 必须跳过）
     if (to.path === "/" || to.path === "/404") {
-      const fallback = firstAuthorizedPath(menu)
+      const fallback = firstAuthorizedPath(menu, { excludeAdminOnly: !admin })
       if (fallback && fallback !== to.path) {
         return { path: fallback }
       }
+      // 没有可用菜单时停在 /404（如果不是 /404 才跳，避免 / → /404 → / 循环）
+      if (!fallback && to.path !== "/404") return { path: "/404" }
     }
 
     if (to.matched.length === 0) return { path: "/404" }
