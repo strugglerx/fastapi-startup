@@ -20,6 +20,7 @@ def _menu_to_dict(row: SysMenu) -> dict:
         "icon": row.icon,
         "sort": row.sort,
         "hidden": bool(row.hidden),
+        "adminSidebarHidden": bool(row.admin_sidebar_hidden),
         "cacheable": bool(row.cacheable),
         "source": row.source or "code",
         "enabled": bool(row.enabled),
@@ -222,7 +223,7 @@ class MenuService:
         },
         "system:menu": {
             "title": "菜单管理",
-            "icon": "Settings",
+            "icon": "Layers",
             "parentKey": "g:system",
             "path": "/system/menu",
             "component": "system/menu/index",
@@ -483,6 +484,7 @@ class MenuService:
         parent_key: Optional[str] = None,
         sort: Optional[int] = None,
         hidden: Optional[bool] = None,
+        admin_sidebar_hidden: Optional[bool] = None,
     ) -> dict:
         menu_key = (menu_key or "").strip()
         if not menu_key:
@@ -506,6 +508,8 @@ class MenuService:
                 row.sort = int(sort)
             if hidden is not None:
                 row.hidden = bool(hidden)
+            if admin_sidebar_hidden is not None:
+                row.admin_sidebar_hidden = bool(admin_sidebar_hidden)
 
             db.commit()
             db.refresh(row)
@@ -682,6 +686,7 @@ class MenuService:
                 icon=data.get("icon"),
                 sort=int(data.get("sort") or 0),
                 hidden=bool(data.get("hidden")),
+                admin_sidebar_hidden=bool(data.get("adminSidebarHidden")),
                 cacheable=bool(data.get("cacheable")),
                 enabled=bool(data.get("enabled", True)),
                 source="ui",
@@ -726,6 +731,8 @@ class MenuService:
                 row.sort = int(data.get("sort") or 0)
             if "hidden" in data:
                 row.hidden = bool(data.get("hidden"))
+            if "adminSidebarHidden" in data:
+                row.admin_sidebar_hidden = bool(data.get("adminSidebarHidden"))
             if "cacheable" in data:
                 row.cacheable = bool(data.get("cacheable"))
             if "enabled" in data:

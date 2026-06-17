@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **菜单字段 `admin_sidebar_hidden`**：替代之前在 guards.js 里硬编码的 `ADMIN_ONLY_PATHS`，让"哪些菜单不出现在 admin 侧栏"由数据决定：
+  - `sys_menu` 新增 `admin_sidebar_hidden` 列（auto-migrate）；`/api/menu/sync` / `POST /api/menu/` / `PATCH /api/menu/{menu_key}` / `PUT /api/menu/{id}` 均接受 `adminSidebarHidden` 字段
+  - 菜单管理 UI 增加"管理员侧栏隐藏"开关
+  - 仅控制侧栏显隐，**不**拦截 URL 访问与角色授权（管理员仍可直接通过 URL 进入）
+- **管理员调试开关：显示全部菜单**：admin 头像下拉新增「调试：显示全部菜单」选项，开启后忽略所有 `adminSidebarHidden` 标记；写入 `sessionStorage`，关闭浏览器或刷新会话即恢复。开发阶段无需反复改菜单配置。
+- **`guards.js` 简化**：删除 `ADMIN_ONLY_PATHS` 硬编码；路由访问完全由 SysRoleMenu 授权决定（未授权 → 路由未注册 → 自然 404）。
+
 ### 配置
 
 - **品牌名统一由 env 驱动**：

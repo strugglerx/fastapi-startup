@@ -84,6 +84,7 @@ class SysMenu(Base):
     icon       = Column(String(64), nullable=True)
     sort       = Column(Integer, nullable=False, default=0)
     hidden     = Column(Boolean, nullable=False, default=False)
+    admin_sidebar_hidden = Column(Boolean, nullable=False, default=False, comment="仅对 admin 隐藏侧栏入口；不影响访问权与角色授权")
     cacheable  = Column(Boolean, nullable=False, default=False)
     source     = Column(String(16), nullable=False, default="code", comment="code=代码同步页面，ui=UI 创建分组")
     enabled    = Column(Boolean, nullable=False, default=True, comment="0=代码已删除，软禁用")

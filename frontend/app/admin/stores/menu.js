@@ -5,10 +5,25 @@ import { registerDynamicRoutes } from "../router/dynamic.js"
 import { getLocalPages } from "../shared/page-registry.js"
 
 
+const DEBUG_KEY = "smartai_admin_menu_debug_show_all"
+
 const registered = ref(false)
 const rawList = ref([])
-const tree = ref([])
+const debugShowAll = ref(sessionStorage.getItem(DEBUG_KEY) === "true")
 let _loading = null
+
+function _isAdminUser() {
+  try {
+    const u = JSON.parse(localStorage.getItem("smartai_admin_user") || "null")
+    if (!u) return false
+    if (u.fixed) return true
+    if (u.role === "admin") return true
+    if (Array.isArray(u.permissions) && u.permissions.includes("*")) return true
+    return false
+  } catch {
+    return false
+  }
+}
 
 function toTree(items) {
   const map = new Map()
@@ -31,6 +46,17 @@ function toTree(items) {
   return roots
 }
 
+// 计算侧栏可见的菜单（按 hidden + 管理员侧栏隐藏 + 调试开关过滤）
+const tree = computed(() => {
+  const admin = _isAdminUser()
+  const list = rawList.value.filter((item) => {
+    if (item.hidden) return false
+    if (admin && item.adminSidebarHidden && !debugShowAll.value) return false
+    return true
+  })
+  return toTree(list)
+})
+
 async function load() {
   if (registered.value) return
   if (_loading) return _loading
@@ -49,7 +75,6 @@ async function load() {
     }
 
     rawList.value = list
-    tree.value = toTree(list.filter((item) => !item.hidden))
     registerDynamicRoutes(list)
     registered.value = true
   })().finally(() => {
@@ -62,14 +87,22 @@ async function load() {
 function reset() {
   registered.value = false
   rawList.value = []
-  tree.value = []
+}
+
+function setDebugShowAll(v) {
+  const next = Boolean(v)
+  debugShowAll.value = next
+  if (next) sessionStorage.setItem(DEBUG_KEY, "true")
+  else sessionStorage.removeItem(DEBUG_KEY)
 }
 
 export function useMenuStore() {
   return {
     registered: computed(() => registered.value),
     rawList: computed(() => rawList.value),
-    tree: computed(() => tree.value),
+    tree,
+    debugShowAll: computed(() => debugShowAll.value),
+    setDebugShowAll,
     load,
     reset,
   }

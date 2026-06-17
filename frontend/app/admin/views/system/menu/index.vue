@@ -114,7 +114,15 @@
               <n-form-item label="侧边栏隐藏">
                 <n-switch v-model:value="form.hidden" />
               </n-form-item>
-              
+
+              <n-form-item
+                label="管理员侧栏隐藏"
+                v-if="form.menuType !== 'button'"
+                title="开启后，admin 角色的侧栏不再显示该菜单（仍可通过 URL 访问，调试模式可临时显示）"
+              >
+                <n-switch v-model:value="form.adminSidebarHidden" />
+              </n-form-item>
+
               <n-form-item label="组件缓存" v-if="form.menuType === 'menu'">
                 <n-switch v-model:value="form.cacheable" />
               </n-form-item>
@@ -197,6 +205,7 @@ const form = reactive({
   icon: null,
   sort: 0,
   hidden: false,
+  adminSidebarHidden: false,
   cacheable: false,
   enabled: true,
 })
@@ -467,6 +476,7 @@ function selectNode(rawNode) {
   form.icon = rawNode.icon || "default"
   form.sort = rawNode.sort || 0
   form.hidden = Boolean(rawNode.hidden)
+  form.adminSidebarHidden = Boolean(rawNode.adminSidebarHidden)
   form.cacheable = Boolean(rawNode.cacheable)
   form.enabled = Boolean(rawNode.enabled)
 }
@@ -491,6 +501,7 @@ function resetForm() {
     icon: "default",
     sort: 0,
     hidden: false,
+    adminSidebarHidden: false,
     cacheable: false,
     enabled: true,
   })
@@ -560,6 +571,7 @@ async function handleSave() {
     icon: form.icon,
     sort: form.sort,
     hidden: form.menuType === "button" ? true : form.hidden,
+    adminSidebarHidden: form.menuType === "button" ? false : form.adminSidebarHidden,
     cacheable: form.menuType === "button" ? false : form.cacheable,
     enabled: form.enabled,
   }

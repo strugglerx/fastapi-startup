@@ -104,6 +104,7 @@ class UpdateMetaReq(BaseModel):
     parentKey: Optional[str] = Field(None, max_length=128)
     sort: Optional[int] = None
     hidden: Optional[bool] = None
+    adminSidebarHidden: Optional[bool] = None
 
 
 class CreateGroupReq(BaseModel):
@@ -124,6 +125,7 @@ async def update_meta(menu_key: str, req: UpdateMetaReq, _admin=Depends(require_
         parent_key=req.parentKey if "parentKey" in fields else None,
         sort=req.sort if "sort" in fields else None,
         hidden=req.hidden if "hidden" in fields else None,
+        admin_sidebar_hidden=req.adminSidebarHidden if "adminSidebarHidden" in fields else None,
     )
 
 
@@ -153,6 +155,7 @@ class MenuReq(BaseModel):
     icon: Optional[str] = Field(None, max_length=64)
     sort: int = 0
     hidden: bool = False
+    adminSidebarHidden: bool = False
     cacheable: bool = False
     enabled: bool = True
 
