@@ -7,7 +7,7 @@
 ```
 .
 ├── backend/   # FastAPI 后端脚手架 → 详见 backend/AGENTS.md
-├── frontend/  # 前端（Naivue UI）
+├── frontend/  # 前端（Naive UI） → 详见 frontend/AGENTS.md
 └── hack/      # 工具脚本（含 codegen.py 代码生成器）
 ```
 
