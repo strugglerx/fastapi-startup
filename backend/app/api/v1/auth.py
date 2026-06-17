@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.v1.deps import get_current_user
+from app.api.v1.deps import get_current_user, RateLimiter
 from app.service import UserService
 
 router = APIRouter(prefix="/auth", tags=["认证"])
@@ -19,7 +19,7 @@ class LoginReq(BaseModel):
     password: str = Field(..., min_length=1, max_length=128)
 
 
-@router.post("/login", summary="后台登录")
+@router.post("/login", summary="后台登录", dependencies=[Depends(RateLimiter(limit=10, window=60, name="login"))])
 async def login(req: LoginReq):
     return UserService.login(req.email, req.password)
 

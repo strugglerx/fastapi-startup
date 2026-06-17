@@ -191,3 +191,19 @@ class SysDictItem(Base):
     enabled    = Column(Boolean, default=True, nullable=False, comment="是否启用")
     created_at = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
     updated_at = Column(sa.DateTime(timezone=True), default=_now, onupdate=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+
+
+class SysProduct(Base):
+    __tablename__ = "sys_product"
+    __table_args__ = (
+        {"comment": "产品管理"},
+    )
+
+    id         = Column(BigInteger().with_variant(mysql.BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    name       = Column(String(255), nullable=True, comment='产品名称')
+    price      = Column(sa.Float, default=0.0, nullable=False, comment='产品单价')
+    status     = Column(Integer, default=0, nullable=False, comment='状态')
+    description = Column(Text, nullable=True, comment='描述')
+    created_by = Column(Integer, nullable=True, comment="创建用户ID")
+    created_at = Column(sa.DateTime(timezone=True), default=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)
+    updated_at = Column(sa.DateTime(timezone=True), default=_now, onupdate=_now, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False)

@@ -191,3 +191,55 @@ def require_permission(permission: str):
                 raise APIException(msg=f"权限不足，需要权限: {permission}", code=403)
         return current_user
     return dependency
+
+
+class RateLimiter:
+    """Redis 令牌桶/滑动窗口限流依赖项"""
+    def __init__(self, limit: int, window: int, name: str = "default"):
+        self.limit = limit
+        self.window = window
+        self.name = name
+
+    async def __call__(self, request: Request) -> bool:
+        # 获取真实客户端 IP
+        ip = ""
+        for header in ("x-forwarded-for", "x-real-ip"):
+            if val := request.headers.get(header):
+                ips = [i.strip() for i in val.split(",")]
+                if ips and ips[0]:
+                    ip = ips[0]
+                    break
+        if not ip:
+            ip = request.client.host if request.client else ""
+
+        # 检查是否已有已登录用户，结合 IP/用户 ID 限流
+        user_id = None
+        user = getattr(request.state, "user", None)
+        if user:
+            user_id = user.id
+
+        identifier = f"user:{user_id}" if user_id else f"ip:{ip}"
+        key = f"rate_limit:{self.name}:{identifier}"
+
+        try:
+            r = await RedisPool.get_async_redis()
+            current = await r.get(key)
+            if current is not None:
+                current_val = int(current)
+                if current_val >= self.limit:
+                    ttl = await r.ttl(key)
+                    raise APIException(msg=f"请求过于频繁，请在 {ttl} 秒后重试", code=429, status_code=429)
+                else:
+                    await r.incr(key)
+            else:
+                # 管道操作，原子性设置限流 key 和 TTL
+                pipe = r.pipeline()
+                pipe.set(key, 1, ex=self.window)
+                await pipe.execute()
+        except APIException:
+            raise
+        except Exception as e:
+            logger.warning(f"RateLimiter Redis checking failed: {e}")
+
+        return True
+

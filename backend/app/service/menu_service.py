@@ -192,6 +192,12 @@ class MenuService:
             "parentKey": "g:system",
             "sort": 16,
         },
+        "system:product": {
+            "title": "产品管理",
+            "icon": "Grid",
+            "parentKey": "g:system",
+            "sort": 17,
+        },
     }
 
     @classmethod
