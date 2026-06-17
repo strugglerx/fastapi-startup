@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy import or_
 
-from app.boot import APIException, jwt_config, logger
+from app.boot import APIException, app_config, jwt_config, logger
 from app.core.jwt import create_access_token
 from app.core.redis_pool import RedisPool
 from app.core.security import get_password_hash, validate_password_strength, verify_password
@@ -298,12 +298,13 @@ class UserService:
 
             send_mail(
                 to=email_norm,
-                subject="【智慧AI 探索平台】密码重置验证码",
+                subject=f"【{app_config.name}】密码重置验证码",
                 body=(
                     f"您好，\n\n"
                     f"您的密码重置验证码是：{code}\n"
                     f"该验证码 10 分钟内有效，仅可使用一次。\n\n"
-                    f"如果您没有发起此请求，请忽略本邮件。\n"
+                    f"如果您没有发起此请求，请忽略本邮件。\n\n"
+                    f"—— {app_config.name}\n"
                 ),
             )
 

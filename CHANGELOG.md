@@ -9,6 +9,10 @@
 
 ## [Unreleased]
 
+### 配置
+
+- **`APP_NAME` 环境变量**：新增 `AppConfig.name`（默认 `智慧AI 探索平台`），密码重置邮件的主题/落款改为读取它，便于不同部署实例改品牌名而无需改代码。启动日志会打印 `应用名: ...`。
+
 ### 安全
 
 - **密码强度策略**：`app/core/security.py:validate_password_strength` —— 长度 8-128、至少含 1 字母+1 数字、不允许全相同字符。接入 `change_password` / `reset_password` / `create_admin` / `register`。

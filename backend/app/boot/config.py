@@ -25,6 +25,7 @@ class RedisConfig(_Base):
 
 
 class AppConfig(_Base):
+    name: str = Field(default="智慧AI 探索平台", validation_alias="APP_NAME")
     debug: bool = Field(default=True, validation_alias="APP_DEBUG")
     cors_origins: str = Field(default="*", validation_alias="APP_CORS_ORIGINS")
     enable_gzip: bool = Field(default=True, validation_alias="APP_ENABLE_GZIP")
@@ -113,6 +114,7 @@ _use_sqlite = os.getenv("APP_USE_SQLITE", "").lower() == "true"
 _jwt_default = jwt_config.secret_key == "default_secret_key_please_change_in_production"
 
 logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+logger.info(f"  应用名     : {app_config.name}")
 logger.info(f"  环境       : {_app_env}")
 logger.info(f"  调试模式   : {'开启' if app_config.debug else '关闭'}")
 logger.info(f"  数据库     : {'SQLite (app/data/sqlite.db)' if _use_sqlite else f'MySQL {database_config.user}@{database_config.host}:{database_config.port}/{database_config.db_name}'}")
