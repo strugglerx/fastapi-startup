@@ -7,6 +7,74 @@
 
 ---
 
+## [Unreleased]
+
+### 新增
+
+- **菜单组织 UI 化**：
+  - 后端：`sys_menu` 新增 `source` 字段；`POST /api/menu/sync` 收紧为只同步 `menuKey/path/component/cacheable`；新增 `PATCH /api/menu/{menu_key}`、`POST /api/menu/groups`、`DELETE /api/menu/{menu_key}`；启动期把既有 `component="__group__"` 菜单迁为 `source="ui"`
+  - 前端：`definePage()` 禁止在 `page.js` 写 `title/icon/parentKey/sort/hidden`；清理现有 page.js；系统设置新增“菜单管理”UI，支持分组创建、运维字段编辑、拖拽调整父级/排序、删除 UI 分组
+  - 图标：引入 `@vicons/lucide`，新增 `shared/icon-library.js` 与 `IconPicker.vue`，侧栏/页签改为 Vue 组件图标渲染，移除旧 `icon-registry.js`
+  - 文档：`docs/admin-platform-mvp.md` 新增 ADR-011，明确所有非代码可推导字段均由 UI 维护
+- 重建 `sys_role` 表，恢复 UI 可配置角色（推翻 ADR-009 轻量 RBAC）
+- 新增 系统设置页 + 同步菜单按钮
+- 账号管理：搜索 / 角色筛选 / 状态筛选 / 行内启停 / 编辑账号 / 最后登录列
+- `User.last_login_at` 字段（自动 ALTER）
+- UI 文案：「软删除」 → 「删除」
+- **轻量角色-菜单关联**：
+  - 后端：新增 `sys_role_menu` 表；`GET /api/menu/list` 按当前用户 `role` 过滤菜单；新增 `GET /api/menu/role-grants` 与 `PUT /api/menu/role-grants` 授权 API；账号 `PUT /api/v1/admins/{id}` 继续支持 role 编辑
+  - 前端：角色管理页改为 admin/member 菜单树授权；账号管理页新增"改角色"操作；删除 `system/user` 重复占位页面
+  - 文档：`docs/admin-platform-mvp.md` 补充轻量 RBAC DDL、API 契约与 ADR-009
+- **Admin Platform MVP 架构**（`docs/admin-platform-mvp.md` v1.1）：代码优先 + 动态菜单 + 动态路由
+  - 后端：新增 `sys_menu` 表 + `GET /api/menu/list` + `POST /api/menu/sync`（`backend/app/db/models.py` `SysMenu`、`backend/app/service/menu_service.py`、`backend/app/api/menu.py`）；旧 `sys_resource` RBAC 已整套移除（见「移除」）
+  - 前端：`frontend/app/admin/` 子应用按文档全量重写
+    - `shared/define-page.js`：`PageMeta` JSDoc + `definePage()`，页面元数据唯一真实源
+    - `router/`：`constant-routes.js` / `guards.js` / `dynamic.js` / `index.js`，动态 `addRoute` + KeepAlive 包名
+    - `stores/`：`menu.js`（模块级 `ref` 单例 + composable，建树 + `_loading` 去重）、`keep-alive.js`、`user.js`
+    - `components/Layout/`：naive-ui 主布局 + Sidebar
+    - `views/`：dashboard / system/user / system/role / profile / error/404 示例页 + `page.js`
+  - 同步脚本：`frontend/scripts/sync-menu.mjs` —— 扫描 `views/**/page.js`、校验 `menuKey` 冲突 / `path` / 父子 / `component` 文件存在性，节点直跑（`#/admin/...` 别名经 `data:` URL 改写）
+  - `frontend/package.json`：新增 `sync:menu` 脚本与 `globby` devDependency（用户执行 `pnpm install` 后可用）
+
+### 移除
+
+- 旧 `frontend/app/admin/routes.js`、`router.js`、`composables/useAdminMenu.js`：被新的 `router/` 与 `stores/menu.js` 取代
+- 旧 `frontend/app/admin/views/Admin*View.vue` / `_PlaceholderView.vue`：内容迁到新 `views/<module>/<sub>/index.vue` 形态
+- **整套旧 RBAC 拔除（彻底白纸，身份只留硬编码 admin|member）**：
+  - 数据模型：删 `SysResource` / `SysRole` / `RoleResource` 三表（远端 `smart_ai_v2` 对应表已 `DROP`，行数据备份在 `/tmp`）
+  - 后端：删 `resource_service.py` / `role_service.py`、`api/v1/resource.py` / `role.py`、`/me/menus` / `/me/grants` 端点、启动期 `ensure_seed_resources` / `ensure_seed_roles` 种子
+  - `user_service`：角色校验由查 `sys_role` 改为硬编码 `ALLOWED_ROLES=("admin","member")`；鉴权本就只看 `user.role` 字符串，未受影响
+  - 前端：删 `api/resource.js` / `api/role.js`、孤儿组件 `AccountTable.vue`，清理 `api/index.js` 导出
+  - 保留模型：`User` / `AccessKey` / `SysMenu`
+
+- **权限管理页面**（`AdminAuthorityView.vue`）：
+  - 资源管理：支持查看、创建、编辑、删除菜单/页面/操作资源
+  - 角色授权：支持为 admin/member 角色分配资源权限（树形勾选）
+- **API 层重构**（`frontend/app/admin/api/`）：
+  - 新增 `auth.js`、`admin.js`、`chat.js`、`provider.js`、`sys-user.js`、`resource.js`、`base.js`、`feedback.js` 等模块
+  - 统一错误处理：拦截器自动处理 401 跳登录、业务码非 0 弹错
+  - 修复响应拦截器逻辑：后端返回 HTTP 状态码作为 code，前端改为只检查 `code: 0` 为成功
+
+### 修复
+
+- **响应拦截器误判**：前端错误地认为 `code: 200` 也是成功，导致所有非 200 响应被当作错误处理
+- **重复导入**：`AdminProvidersView.vue` 中 `notifySuccess` 重复导入
+
+### 移除
+
+- **整条 AI Agent / C 端栈下线** —— 项目收敛为「纯后台管理（账号 + RBAC）」：
+  - 数据模型：删 `Agent` / `AiProvider` / `AiConversation` / `AiMessage` / `SysUser` 五张表（仅代码层，自动迁移不删 DB 既有表/数据，可逆）
+  - 后端：删 `agent_service` / `chat_service` / `conversation_service` / `provider_service` / `sys_user_service` 及对应 `api/v1` 路由；删 `core/providers/`（openai / coze / dify / factory）
+  - 前端：删 `AdminAgentsView` / `AdminConversationsView` / `AdminProvidersView` / `AdminToolsView` / `AdminUsersView` 视图、`AgentChatTest` 组件、`agent/chat/conversation/provider/sys-user` api 客户端及对应路由
+  - 保留：`User`（后台账号）/ `AccessKey` / `SysResource` / `SysRole` / `RoleResource`
+- **后台菜单推到「准白纸」（为重新设计让路）** —— `ensure_seed_resources` 种子从 `g_settings/roles/admins/system/profile` 缩到只剩 `system`（菜单编辑器逃生入口，改为顶级）+ `profile`（永远可达）：
+  - `SYSTEM_MENU_CODES` 缩为 `("system",)`；`routes.js` 仅留 `system` + `profile`
+  - 落地/affix 锚点从 `dashboard` 迁到 `system`（`router.js` 跳转、`index.html` 重定向、`App.vue` `AFFIX_KEY`）
+  - 远端 `sys_resource` 清掉 `g_settings/roles/admins/dashboard` 死行（备份在 `/tmp`），现存 `system` + `profile`
+  - `AdminDashboardView` / `AdminAuthorityView`（roles）/ `AdminAdminsView`（admins）视图文件暂留磁盘但已不可达，待重设计时复用或删除；后端 `role` / `admin` API 仍在
+
+---
+
 ## [1.1.0] — 2026-06-16
 
 围绕"AI 驱动开发"做了一轮系统性升级：引入分层架构、现代化基础设施、补齐测试与文档。

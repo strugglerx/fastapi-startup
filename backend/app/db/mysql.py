@@ -179,7 +179,18 @@ def auto_migrate_columns(engine):
                     default = ""
                     if column.default is not None:
                         if hasattr(column.default, 'arg') and not callable(column.default.arg):
-                            default = f" DEFAULT '{column.default.arg}'"
+                            arg = column.default.arg
+                            # 关键修复：Boolean 默认值要转 1/0；数字不带引号；其他才加引号
+                            from sqlalchemy import Boolean, Integer
+                            actual_type = type(column.type)
+                            if isinstance(column.type, Boolean) or issubclass(actual_type, Boolean):
+                                default = f" DEFAULT {1 if arg else 0}"
+                            elif isinstance(arg, bool):
+                                default = f" DEFAULT {1 if arg else 0}"
+                            elif isinstance(arg, (int, float)):
+                                default = f" DEFAULT {arg}"
+                            else:
+                                default = f" DEFAULT '{arg}'"
                     comment = f" COMMENT '{column.comment}'" if column.comment else ""
 
                     alter_sql = f"ALTER TABLE `{table_name}` ADD COLUMN `{column.name}` {col_type} {nullable}{default}{comment}"

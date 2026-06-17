@@ -1,0 +1,132 @@
+/*
+ * DocReport Pro · Admin Design Tokens
+ * Aesthetic: "Editorial Indigo · Quiet Density"
+ *
+ * The internal SaaS console is built around three commitments:
+ *   1. IBM Plex Sans / Mono carries the editorial-product voice — single
+ *      typeface family, never substituted with Inter/system.
+ *   2. Indigo is a single-point accent (focus, brand bar, primary CTA),
+ *      not a wash. Surfaces stay neutral so data has room to breathe.
+ *   3. Density is high but ranked: padding/gap/border-radius all scale
+ *      from a 4px base so dashboards stay tight without feeling cramped.
+ *
+ * Every admin page should consume these tokens via `var(--c-*)` etc.
+ * Hard-coded #hex values inside .vue scoped styles are a code smell —
+ * replace them with a token before commit.
+ */
+
+:root {
+  /* ── Surfaces & neutrals ─────────────────────────────────────────── */
+  --c-bg:               #F6F8FB;  /* page background — cool off-white */
+  --c-surface:          #FFFFFF;  /* card / panel surface */
+  --c-surface-sunken:   #F9FAFB;  /* toolbar / search-box inset */
+  --c-surface-hover:    #FAFBFC;  /* row hover (table) */
+
+  --c-border:           #E5E7EB;  /* default border */
+  --c-border-strong:    #D1D5DB;  /* hover / focused border */
+  --c-divider:          #F3F4F6;  /* inline divider (table rows, sections) */
+
+  /* ── Text ────────────────────────────────────────────────────────── */
+  --c-text:             #111827;  /* primary text */
+  --c-text-secondary:   #4B5563;  /* dense body, table cells */
+  --c-text-muted:       #6B7280;  /* meta / hint */
+  --c-text-faint:       #9CA3AF;  /* caption / placeholder */
+
+  /* ── Brand (indigo) ──────────────────────────────────────────────── */
+  --c-brand:            #6366F1;
+  --c-brand-strong:     #4F46E5;  /* hover / active */
+  --c-brand-soft:       #EEF2FF;  /* chip background / soft fill */
+  --c-brand-soft-strong:#E0E7FF;  /* chip hover background */
+  --c-brand-text:       #4338CA;  /* chip / link text on soft bg */
+  --c-brand-border:     #C7D2FE;
+
+  /* ── Status semantics (5 channels) ───────────────────────────────── */
+  /* Success — emerald. Used for: completed runs, healthy quotas, OK badges. */
+  --c-success-bg:       #ECFDF5;
+  --c-success-text:     #047857;
+  --c-success-border:   #A7F3D0;
+  --c-success-dot:      #10B981;
+
+  /* Warning — amber. Used for: pending, queued, soft limits hit. */
+  --c-warning-bg:       #FFFBEB;
+  --c-warning-text:     #B45309;
+  --c-warning-border:   #FCD34D;
+  --c-warning-dot:      #F59E0B;
+
+  /* Error — rose. Used for: failed runs, deletions, hard limits. */
+  --c-error-bg:         #FEF2F2;
+  --c-error-text:       #B91C1C;
+  --c-error-border:     #FECACA;
+  --c-error-dot:        #EF4444;
+
+  /* Info — blue. Used for: running, in-flight, neutral state changes. */
+  --c-info-bg:          #EFF6FF;
+  --c-info-text:        #1D4ED8;
+  --c-info-border:      #BFDBFE;
+  --c-info-dot:         #3B82F6;
+
+  /* Neutral — slate. Used for: archived, draft, unset, fallback. */
+  --c-neutral-bg:       #F3F4F6;
+  --c-neutral-text:     #4B5563;
+  --c-neutral-border:   #E5E7EB;
+  --c-neutral-dot:      #9CA3AF;
+
+  /* ── Typography ──────────────────────────────────────────────────── */
+  --ff-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --ff-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --fs-xs:    11px;   /* eyebrow / uppercase tracking */
+  --fs-sm:    12px;   /* caption / meta */
+  --fs-base:  13px;   /* table cell / body */
+  --fs-md:    14px;   /* button label / form label */
+  --fs-lg:    16px;   /* section title */
+  --fs-xl:    20px;   /* page title */
+
+  --lh-tight: 1.25;
+  --lh-base:  1.45;
+  --lh-loose: 1.6;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --ltr-eyebrow: 0.06em;   /* uppercase section eyebrow */
+  --ltr-tight:  -0.02em;   /* page title tightening */
+
+  /* ── Spacing (4px base) ──────────────────────────────────────────── */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  32px;
+  --sp-8:  40px;
+
+  /* ── Radius ─────────────────────────────────────────────────────── */
+  --r-xs:  4px;   /* chip / badge */
+  --r-sm:  6px;   /* row button */
+  --r-md:  8px;   /* button / input */
+  --r-lg:  10px;  /* toolbar / panel */
+  --r-xl:  12px;  /* card / data-table shell */
+  --r-pill: 999px;
+
+  /* ── Shadow ─────────────────────────────────────────────────────── */
+  --sh-1: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --sh-2: 0 1px 3px rgba(17, 24, 39, 0.06), 0 1px 2px rgba(17, 24, 39, 0.03);
+  --sh-3: 0 4px 12px rgba(17, 24, 39, 0.08);
+  --sh-focus: 0 0 0 3px rgba(99, 102, 241, 0.16);
+
+  /* ── Motion ─────────────────────────────────────────────────────── */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 280ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Convenience aliases (referenced in views with inline fallbacks) ─ */
+  --c-brand-subtle:  #EFF6FF;  /* ≈ --c-brand-soft; indigo-50 tint */
+  --c-text-primary:  #0F172A;  /* slate-950; darker than --c-text for display text */
+  --c-text-tertiary: #94A3B8;  /* slate-400; lighter than --c-text-faint */
+  --c-bg-subtle:     #F1F5F9;  /* slate-50; light inset / chip background */
+}

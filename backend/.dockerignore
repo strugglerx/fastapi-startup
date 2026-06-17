@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# 虚拟环境
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 运行时产物
+logs/
+*.log
+auto_docs/
+routes.md
+
+# 本地数据库
+app/data/*.db
+*.sqlite
+*.sqlite3
+
+# 环境与密钥
+.env
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Docs
+README*.md
+CLAUDE.md
+CHANGELOG.md
+AGENTS.md
+
+# 测试
+tests/
+
+# Docker 自身
+Dockerfile
+.dockerignore
+docker-compose.yml

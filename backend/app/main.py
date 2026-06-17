@@ -1,9 +1,11 @@
 from .boot.application import create_app
+from .api.menu import router as menu_router
 from .api.public import router as public_router
 from .api.v1 import router as v1_router
 
 app = create_app()
 
+app.include_router(menu_router)
 app.include_router(v1_router)
 app.include_router(public_router)
 

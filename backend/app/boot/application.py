@@ -25,7 +25,22 @@ class ExtendedFastAPI(FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动
+    # 启动：种子管理员（容错，DB 异常时不阻断启动）
+    try:
+        from app.service import MenuService, RoleService, UserService
+        RoleService.ensure_seed_roles()
+        MenuService.ensure_source_migration()
+        r = UserService.ensure_seed_admin()
+        if r.get("created"):
+            logger.warning(
+                f"⚠ 已创建种子管理员 {UserService.SEED_EMAIL} / {UserService.SEED_PASSWORD}，"
+                "请首次登录后立即改密"
+            )
+        else:
+            logger.info(f"✓ 种子管理员已存在: {r.get('email')}")
+    except Exception as e:
+        logger.warning(f"种子管理员 ensure 失败（已跳过）: {e}")
+
     try:
         mount_static(app)
         logger.info("静态资源已挂载到 /")

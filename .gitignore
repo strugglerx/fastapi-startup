@@ -62,8 +62,36 @@ htmlcov/
 backend/routes.md
 backend/auto_docs/
 
-# Docker
-.dockerignore
-
 # Private
 hack/tencent.mk
+
+# ─── Frontend (Node / Vite / pnpm) ─────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/logs/
+frontend/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp.*
+.eslintcache
+.stylelintcache
+
+# 前端构建产物会落到 backend/app/public/（vite outDir），
+# 目录保留以便 FastAPI 静态挂载，但内容随 build 重新生成
+backend/app/public/*
+!backend/app/public/.gitkeep
+
+# 前端本地 env（顶层 .env 已被上面通配，这里显式覆盖防误删 example）
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.example
+
+# OS / Editor
+Thumbs.db
+.history/

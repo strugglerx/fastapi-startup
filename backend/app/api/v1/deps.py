@@ -22,6 +22,9 @@ def get_cached_user(user_id: int) -> Optional[User]:
             user = User()
             user.id = d['id']
             user.username = d['username']
+            user.email = d.get('email')
+            user.full_name = d.get('full_name')
+            user.role = d.get('role', 'member')
             user.fixed = d['fixed']
             user.deleted_at = d.get('deleted_at')
             return user
@@ -37,6 +40,9 @@ def cache_user(user: User):
         user_dict = {
             'id': user.id,
             'username': user.username,
+            'email': user.email,
+            'full_name': user.full_name,
+            'role': user.role,
             'fixed': user.fixed,
             'deleted_at': str(user.deleted_at) if user.deleted_at else None,
         }
@@ -127,9 +133,14 @@ async def get_current_user_no_err(
     return None
 
 
+def is_admin(user: User) -> bool:
+    """统一管理员判定：role=='admin' 或 fixed=True"""
+    return (user.role == "admin") or bool(user.fixed)
+
+
 def apply_tenant_filter(query, model, user: User):
     """管理员看全部数据，普通用户只看自己创建的"""
-    if user.fixed:
+    if is_admin(user):
         return query
     return query.filter(model.created_by == user.id)
 
@@ -152,7 +163,12 @@ async def allow_local_only(request: Request):
 
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """要求管理员权限（fixed=True）"""
-    if not current_user.fixed:
+    """要求管理员权限（role=='admin' 或 fixed=True）"""
+    if not is_admin(current_user):
         raise APIException(msg="需要管理员权限", code=403)
+    return current_user
+
+
+async def require_login(current_user: User = Depends(get_current_user)) -> User:
+    """要求登录（admin 或 member 都可）"""
     return current_user
