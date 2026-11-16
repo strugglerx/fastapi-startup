@@ -85,6 +85,11 @@ def setup_compression(app: FastAPI):
 # ────────────────────────────────────────────
 _SKIP_WRAP_PREFIXES = ("/docs", "/redoc", "/openapi.json", "/doc/")
 
+# 路由声明「我不要被包装」的响应头。中间件检测到后跳过包装并剥离该 header
+# （不暴露给客户端）。供 JSON-RPC / 第三方协议 / SSE 文本流等不能被包成
+# {code, data} 的端点显式声明。用法见 app/api/v1/deps.py:raw_response。
+SKIP_WRAP_HEADER = "x-skip-wrap"
+
 
 def _is_wrapped_response(data) -> bool:
     """更稳健的判断：dict 且同时包含 code + (data 或 msg)。"""
@@ -107,6 +112,11 @@ def setup_stand_response(app: FastAPI):
 
         # 跳过文档/规范路径
         if any(request.url.path.startswith(p) for p in _SKIP_WRAP_PREFIXES):
+            return response
+
+        # 路由通过 Depends(raw_response) 显式声明跳过包装。剥离 header 不外泄给客户端。
+        if response.headers.get(SKIP_WRAP_HEADER):
+            del response.headers[SKIP_WRAP_HEADER]
             return response
 
         ctype = response.headers.get("content-type", "")
@@ -193,7 +203,16 @@ async def _wrap_regular(response):
     headers = dict(response.headers)
     headers.pop("content-length", None)
     headers.pop("content-type", None)
-    return JSONResponse(status_code=response.status_code, content=data, headers=headers)
+
+    # 用 dumps_jssafe 把雪花 ID（int > 2^53-1）转 string，避免 JS 端丢精度
+    from app.library.json import dumps_jssafe
+    from starlette.responses import Response
+    return Response(
+        content=dumps_jssafe(data),
+        status_code=response.status_code,
+        headers=headers,
+        media_type="application/json",
+    )
 
 
 # ────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # ProTable 统一 CRUD 组件开发指南
 
-`ProTable` 是本脚手架封装的**低代码高阶表格组件**，位于 [frontend/app/admin/components/ProTable.vue](file:///Users/struggler/Documents/project/front-project/智慧幕墙/smart-ai/frontend/app/admin/components/ProTable.vue)。它的设计初衷是通过 JSON Schema 配置，自动渲染标准的**数据表格、搜索条件、弹窗表单、分页、角色权限校验**，免去 80% 重复编写模板代码的工作。
+`ProTable` 是本脚手架封装的**低代码高阶表格组件**，位于 [frontend/app/admin/components/ProTable.vue](file:///Users/struggler/Documents/project/front-project/智慧幕墙/insurance-manager/frontend/app/admin/components/ProTable.vue)。它的设计初衷是通过 JSON Schema 配置，自动渲染标准的**数据表格、搜索条件、弹窗/抽屉表单、分页、角色权限校验**，免去 80% 重复编写模板代码的工作。
 
 如果在开发中感觉“代码生成器生成的效果不好”或“不够精细”，通常是因为仅使用了最基础的静态配置。通过本指南，你可以掌握 `ProTable` 的高级自定义用法，使其满足各种复杂的业务交互。
 
@@ -32,19 +32,38 @@
 | `updateApi` | `Function` | 否 | - | 修改保存 API 函数，有此属性时操作列会自动渲染“编辑” |
 | `deleteApi` | `Function` | 否 | - | 删除 API 函数，有此属性时操作列会自动渲染“删除” |
 | `permissionPrefix` | `String` | 否 | - | 权限前缀。配置后，新建自动绑定 `<prefix>:create`，编辑绑定 `<prefix>:update`，删除绑定 `<prefix>:delete` |
+| `formType` | `String` | 否 | `'modal'` | 表单展示模式：`'modal'` (弹窗) 或 `'drawer'` (右侧抽屉) |
+| `drawerWidth` | `String/Number` | 否 | `'min(980px, 90vw)'` | 抽屉模式下的宽度 |
 | `createTitle` | `String` | 否 | `'新建'` | 新建弹窗的标题 |
 | `editTitle` | `String` | 否 | `'编辑'` | 编辑弹窗的标题 |
 | `rowKey` | `Function` | 否 | `(row) => row.id` | 表格行的 Key 生成函数 |
+| `scrollX` | `Number/String` | 否 | - | 表格横向滚动宽度（列过多时自适应） |
+| `canEdit` | `Function` | 否 | `(row) => true` | 是否允许编辑（返回 false 禁用编辑按钮） |
+| `shouldShowEdit` | `Function` | 否 | `(row) => true` | 是否显示编辑按钮（返回 false 隐藏按钮） |
+| `canDelete` | `Function` | 否 | `(row) => true` | 是否允许删除（返回 false 禁用删除按钮） |
+| `shouldShowDelete` | `Function` | 否 | `(row) => true` | 是否显示删除按钮（返回 false 隐藏按钮） |
 
 ### 🔍 `searchFields` 检索字段配置项
 ```javascript
 {
   key: 'status',               // 接口请求参数字段名
   label: '状态',                // 表单 Label
-  type: 'select',              // 类型: 'text' (默认) | 'select'
+  type: 'select',              // 类型: 'text' / 'input' (默认) | 'select' | 'number' | 'daterange'
   placeholder: '请选择状态',     // 占位符 (可选)
   options: [],                 // 下拉框选项: [{ label, value }] (仅在 select 类型生效)
+  startKey: 'created_at_start',// 仅 daterange 生效：时间范围起始参数名
+  endKey: 'created_at_end',    // 仅 daterange 生效：时间范围结束参数名
   defaultValue: null           // 默认值 (可选)
+}
+```
+
+### 📝 `formFields` 表单字段分组（Tab 支持）
+```javascript
+{
+  key: 'title',
+  label: '名称',
+  tab: '基础信息',              // 配置 tab 属性可自动开启弹窗/抽屉顶部分组页签
+  type: 'text',
 }
 ```
 

@@ -1,5 +1,8 @@
+import ipaddress
 import json
-from typing import Optional
+import os
+from functools import lru_cache
+from typing import Optional, Tuple
 
 from fastapi import Request
 
@@ -7,6 +10,75 @@ from app.core.redis_pool import RedisPool
 from app.db import SessionLocal, AccessKey, User
 from app.boot.exceptions import APIException
 from app.boot import logger
+
+
+# ════════════════════════ 受信任反代解析 ════════════════════════
+# 安全背景：早期所有取真实 IP 的地方（限流 / 审计 / 登录爆破检测）都无条件
+# 信任 `X-Forwarded-For` 首段。攻击者只要 `curl -H 'X-Forwarded-For: 1.2.3.4'`
+# 就能让 identifier 随机化，登录爆破 / Open API 限流形同虚设。
+#
+# 修复：只有当 `request.client.host` 落在 `TRUSTED_PROXY_IPS`（env，逗号分隔，
+# 支持单 IP 或 CIDR）声明的受信代理范围内时，才采纳 XFF / X-Real-IP 首段；
+# 否则强制回退到 socket 对端 `request.client.host`（最严格，无法被 header 伪造）。
+#
+# **生产部署须知**：nginx / k8s ingress / 云 LB 反代后必须显式配置
+# `TRUSTED_PROXY_IPS`（例如 `10.0.0.0/8,172.16.0.0/12`）；否则 IP 会被解析成
+# 内网网关地址（如 `127.0.0.1`），所有 IP 维度限流会塌缩到单一桶。
+
+def _parse_trusted_proxies(raw: str) -> Tuple[ipaddress._BaseNetwork, ...]:
+    """把 `TRUSTED_PROXY_IPS` 解析成 CIDR 列表；脏数据条目静默丢弃。"""
+    if not raw or not raw.strip():
+        return ()
+    nets = []
+    for item in raw.split(","):
+        s = item.strip()
+        if not s:
+            continue
+        try:
+            # 单 IP 也走 ip_network（strict=False 容忍 host bits）
+            nets.append(ipaddress.ip_network(s, strict=False))
+        except ValueError:
+            logger.warning(f"TRUSTED_PROXY_IPS 条目无效，已忽略: {s!r}")
+    return tuple(nets)
+
+
+@lru_cache(maxsize=1)
+def _trusted_proxy_networks() -> Tuple[ipaddress._BaseNetwork, ...]:
+    """env 解析结果缓存。进程内 env 不会变；改 env 必须重启。"""
+    return _parse_trusted_proxies(os.getenv("TRUSTED_PROXY_IPS", ""))
+
+
+def _is_trusted_proxy(peer_ip: str) -> bool:
+    nets = _trusted_proxy_networks()
+    if not nets:
+        return False
+    try:
+        addr = ipaddress.ip_address(peer_ip)
+    except ValueError:
+        return False
+    return any(addr in n for n in nets)
+
+
+def get_client_ip(request: Request) -> str:
+    """获取真实客户端 IP（受信代理感知）。
+
+    返回值：
+      - 受信代理 + 有 XFF / X-Real-IP → 取首段（去空白）
+      - 其它一切情况 → `request.client.host`（兜底 `"unknown"`）
+
+    所有需要按 IP 限流 / 审计 / 风控的代码都应统一调用本函数，避免
+    重复实现「裸取 XFF」的反模式被攻击者绕过。
+    """
+    peer = (request.client.host if request.client else "") or ""
+    if peer and _is_trusted_proxy(peer):
+        for header in ("x-forwarded-for", "x-real-ip"):
+            val = request.headers.get(header)
+            if not val:
+                continue
+            first = val.split(",")[0].strip()
+            if first:
+                return first
+    return peer or "unknown"
 
 
 class DynamicIPRateLimiter:
@@ -66,12 +138,20 @@ class DynamicIPRateLimiter:
                 }
 
             with SessionLocal() as db:
-                row = (
+                # secret_key 在 DB 里是 Fernet 密文，不能直接 WHERE 比对。
+                # 枚举所有活跃 key 后用 decrypt_secret 解密对比（兼容历史明文 → 透传）。
+                from app.core.crypto import decrypt_secret
+                row = None
+                candidates = (
                     db.query(AccessKey, User)
                     .outerjoin(User, AccessKey.created_by == User.id)
-                    .filter(AccessKey.secret_key == token, AccessKey.deleted_at.is_(None))
-                    .first()
+                    .filter(AccessKey.deleted_at.is_(None))
+                    .all()
                 )
+                for ak, u in candidates:
+                    if decrypt_secret(ak.secret_key) == token:
+                        row = (ak, u)
+                        break
                 if not row or not row[0]:
                     # 穿透保护：缓存 not_found 10 秒
                     self.redis.setex(cache_key, 10, json.dumps({"error": "not_found"}))
@@ -113,10 +193,9 @@ class DynamicIPRateLimiter:
         return bool(self.redis.eval(self._RATE_LIMIT_LUA, 1, f"ip_limit:{ip}", str(limit)))
 
     def _get_client_ip(self, request: Request) -> str:
-        xff = request.headers.get("x-forwarded-for")
-        if xff:
-            return xff.split(",")[0].strip()
-        return (request.client.host if request.client else None) or "0.0.0.0"
+        # 走统一 helper：受信反代名单内才信任 XFF，否则强制 socket 对端。
+        ip = get_client_ip(request)
+        return ip if ip and ip != "unknown" else "0.0.0.0"
 
 
 _rate_limiter: Optional[DynamicIPRateLimiter] = None

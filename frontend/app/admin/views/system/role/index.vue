@@ -1,72 +1,29 @@
 <template>
   <div class="admin-page">
-    <AdminPageHeader title="角色管理" subtitle="创建角色并配置页面级菜单授权" />
+    <AdminPageHeader title="角色管理" subtitle="定义不同的操作角色，并为其配置系统页面的访问和操作权限。">
+      <template #actions>
+        <n-button type="primary" size="small" @click="openCreate">新建角色</n-button>
+      </template>
+    </AdminPageHeader>
 
     <section class="role-layout">
-      <aside class="role-list-pane">
-        <div class="pane-header">
-          <span>角色列表</span>
-          <n-button type="primary" size="small" @click="openCreate">新建角色</n-button>
-        </div>
-        <n-spin :show="rolesLoading">
-          <n-list hoverable clickable>
-            <n-list-item
-              v-for="role in roles"
-              :key="role.code"
-              :class="{ 'is-active': selectedRole?.code === role.code }"
-              @click="selectRole(role)"
-            >
-              <div class="role-row">
-                <div class="role-main">
-                  <strong>{{ role.name }}</strong>
-                  <span>{{ role.code }}</span>
-                </div>
-                <div class="role-row-actions" @click.stop>
-                  <n-tag v-if="role.builtin" size="tiny" :bordered="false">内置</n-tag>
-                  <n-button size="tiny" quaternary @click="openEdit(role)">编辑</n-button>
-                  <n-button
-                    size="tiny"
-                    quaternary
-                    type="error"
-                    :disabled="role.builtin"
-                    @click="confirmDelete(role)"
-                  >
-                    删除
-                  </n-button>
-                </div>
-              </div>
-            </n-list-item>
-          </n-list>
-        </n-spin>
-      </aside>
-
-      <main class="grant-pane">
-        <div class="pane-header">
-          <span>{{ selectedRole ? `${selectedRole.name} 的菜单授权` : "菜单授权" }}</span>
-          <n-button
-            type="primary"
-            :loading="saving"
-            :disabled="!selectedRole || selectedRole.code === 'admin'"
-            @click="saveGrants"
-          >
-            保存
-          </n-button>
-        </div>
-        <n-alert v-if="selectedRole?.code === 'admin'" type="info" :bordered="false" class="role-alert">
-          admin 拥有全部菜单与配置权，无需配置授权
-        </n-alert>
-        <n-spin :show="grantsLoading">
-          <n-tree
-            block-line
-            checkable
-            cascade
-            :data="menuTree"
-            :checked-keys="selectedRole?.code === 'admin' ? allMenuKeys : checkedKeys"
-            :render-label="renderLabel"
-            @update:checked-keys="onCheckedKeys"
-          />
-        </n-spin>
-      </main>
+      <RoleListPane
+        :roles="roles"
+        :selected-role="selectedRole"
+        :loading="rolesLoading"
+        @select="selectRole"
+        @edit="openEdit"
+        @delete="confirmDelete"
+      />
+      <RoleGrantPane
+        v-model:checked-keys="checkedKeys"
+        :selected-role="selectedRole"
+        :menu-tree="menuTree"
+        :all-menu-keys="allMenuKeys"
+        :loading="grantsLoading"
+        :saving="saving"
+        @save="saveGrants"
+      />
     </section>
 
     <n-modal v-model:show="showCreate" preset="card" title="新建角色" class="role-modal">
@@ -121,27 +78,23 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, reactive, ref } from "vue"
+import { computed, onMounted, reactive, ref } from "vue"
 import {
-  NAlert,
   NButton,
   NForm,
   NFormItem,
   NInput,
   NInputNumber,
-  NList,
-  NListItem,
   NModal,
-  NSpin,
   NSwitch,
-  NTag,
-  NTree,
   useDialog,
   useMessage,
 } from "naive-ui"
 import { createRole, deleteRole, fetchRoles, updateRole } from "../../../api/role.js"
 import { fetchMenuList, fetchRoleGrants, setRoleGrants } from "../../../api/menu.js"
 import AdminPageHeader from "../../../components/AdminPageHeader.vue"
+import RoleGrantPane from "./RoleGrantPane.vue"
+import RoleListPane from "./RoleListPane.vue"
 
 defineOptions({ name: "SystemRole" })
 
@@ -263,25 +216,6 @@ function buildTree(items, adminMode) {
   return roots
 }
 
-function renderLabel({ option }) {
-  const isButton = option.raw?.component === "__button__"
-  if (isButton) {
-    return h("span", { style: "display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;" }, [
-      h("span", { style: "color: #e08c00; font-weight: 500;" }, option.label),
-      h(NTag, { size: "tiny", bordered: false, type: "warning" }, { default: () => option.raw.menuKey }),
-    ])
-  }
-  if (!option.raw?.hidden) return option.label
-  return h("span", { class: "role-tree-label role-tree-label--muted" }, [
-    h("span", option.label),
-    h(NTag, { size: "tiny", bordered: false, type: "default" }, { default: () => "hidden" }),
-  ])
-}
-
-function onCheckedKeys(keys) {
-  if (selectedRole.value?.code !== "admin") checkedKeys.value = keys
-}
-
 function openCreate() {
   Object.assign(createForm, { code: "", name: "", description: "", sort: 0 })
   showCreate.value = true
@@ -395,69 +329,6 @@ async function saveGrants() {
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: var(--sp-4);
   min-height: 560px;
-}
-
-.role-list-pane,
-.grant-pane {
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-xl);
-  background: var(--c-surface);
-  padding: var(--sp-4);
-  box-shadow: var(--sh-1);
-}
-
-.pane-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  min-height: 32px;
-  margin-bottom: var(--sp-3);
-  font-weight: var(--fw-bold);
-  color: var(--c-text-primary);
-}
-
-.role-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-}
-
-.role-main {
-  display: grid;
-  gap: var(--sp-1);
-  min-width: 0;
-}
-
-.role-main span {
-  color: var(--c-text-muted);
-  font-size: var(--fs-sm);
-}
-
-.role-row-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-1);
-  flex-shrink: 0;
-}
-
-:deep(.n-list-item.is-active) {
-  background: var(--c-brand-soft);
-}
-
-.role-alert {
-  margin-bottom: var(--sp-3);
-}
-
-.role-tree-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-}
-
-.role-tree-label--muted {
-  color: var(--c-text-faint);
 }
 
 .modal-actions {

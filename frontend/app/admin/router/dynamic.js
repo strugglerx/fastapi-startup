@@ -4,7 +4,18 @@ const modules = import.meta.glob("../views/**/*.vue")
 
 export const availableComponents = Object.keys(modules)
   .map((key) => key.replace("../views/", "").replace(".vue", ""))
-  .filter((name) => !name.startsWith("error/") && !name.includes("/components/"))
+  .filter((name) => {
+    if (name.startsWith("error/")) return false
+    if (name.includes("/components/")) return false
+    // render-templates/* 是派发器内部子组件，不是独立页面
+    if (name.includes("/render-templates/")) return false
+    // 约定 _ 开头的目录是私有子组件（如 _shared / _fallback / _internal）
+    if (name.split("/").some((seg) => seg.startsWith("_"))) return false
+    // 约定页面文件用小写命名（index/view/configure/preview），PascalCase 视为子组件
+    const basename = name.split("/").pop()
+    if (basename && /^[A-Z]/.test(basename)) return false
+    return true
+  })
 
 function resolveLoader(component) {
   const key = `../views/${component}.vue`
@@ -41,7 +52,8 @@ export function buildDynamicRoutes(menus) {
 export function registerDynamicRoutes(menus) {
   const routes = buildDynamicRoutes(menus)
   for (const route of routes) {
-    if (!router.hasRoute(route.name)) router.addRoute("Root", route)
+    if (router.hasRoute(route.name)) router.removeRoute(route.name)
+    router.addRoute("Root", route)
   }
   if (!router.hasRoute("AdminCatchAll")) {
     router.addRoute({ path: "/:pathMatch(.*)*", name: "AdminCatchAll", redirect: "/404" })

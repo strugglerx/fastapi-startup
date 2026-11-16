@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
@@ -44,6 +45,10 @@ def create_access_token(
         "sub": subject,
         "exp": int(exp.timestamp()),
         "iat": int(now.timestamp()),
+        # jti：随机化 claim，保证同一秒签发的两条 token signature 必然不同
+        # （fix flaky test_refresh_with_refresh_token_rotates_old_one），
+        # 同时为后续 token 黑名单 / 撤销留出 claim 入口。
+        "jti": uuid.uuid4().hex,
     }
     if additional_claims:
         payload.update(additional_claims)
@@ -94,3 +99,56 @@ def verify_token(token: str) -> TokenPayload:
 
 def decode_token(token: str) -> TokenPayload:
     return _decode(token, verify_exp=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Visitor Token —— Widget 嵌入接入用的短期 JWT，跟 admin user JWT 完全隔离。
+# sub 格式：visitor:<visitor_id>:<widget_id>
+# 验证后只能访问绑定的 widget；不能继承 admin 权限。
+# ─────────────────────────────────────────────────────────────────────────
+_VISITOR_SUB_PREFIX = "visitor:"
+
+
+def create_visitor_token(
+    visitor_id: str,
+    widget_id: int,
+    expires_minutes: int = 120,
+) -> str:
+    """签发 widget 访客 token。subject = visitor:<vid>:<wid>。
+
+    expires_minutes：默认 2 小时，访客刷一次就重发，不长期持有。
+    """
+    subject = f"{_VISITOR_SUB_PREFIX}{visitor_id}:{int(widget_id)}"
+    return create_access_token(
+        subject=subject,
+        expires_delta=timedelta(minutes=max(5, expires_minutes)),
+        additional_claims={"kind": "visitor"},
+    )
+
+
+def parse_visitor_token(token: str) -> Dict[str, Any]:
+    """解析访客 token，返回 {visitor_id, widget_id}。失败抛 JWTError。
+
+    强校验 `kind == "visitor"` —— 防止有人拿 admin token 当 visitor token 用
+    （两者共用同一个 JWT_SECRET_KEY，仅靠 sub 前缀检查不足以隔离签名通过的
+    admin token，必须显式 reject 非 visitor kind 的 payload）。
+    """
+    payload = _decode(token, verify_exp=True)
+    kind = getattr(payload, "kind", None)
+    if kind is None:
+        extra = getattr(payload, "model_extra", None) or {}
+        kind = extra.get("kind")
+    if kind != "visitor":
+        raise JWTError("非 visitor token")
+    sub = payload.sub or ""
+    if not sub.startswith(_VISITOR_SUB_PREFIX):
+        raise JWTError("非 visitor token")
+    rest = sub[len(_VISITOR_SUB_PREFIX):]
+    try:
+        visitor_id, widget_id_str = rest.rsplit(":", 1)
+        widget_id = int(widget_id_str)
+    except Exception as e:
+        raise JWTError(f"visitor sub 格式错误: {sub}") from e
+    if not visitor_id:
+        raise JWTError("visitor_id 为空")
+    return {"visitor_id": visitor_id, "widget_id": widget_id}

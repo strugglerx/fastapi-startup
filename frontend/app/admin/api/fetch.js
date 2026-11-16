@@ -16,9 +16,22 @@
  */
 import axios from "axios"
 
-import { getToken, getAdminActiveRole, toLogin } from "./base.js"
+import { getToken, getAdminActiveRole, logoutAndRedirect } from "./base.js"
 import { notifyError } from "./feedback.js"
 import { maybeRefreshToken } from "./token-refresh.js"
+
+/**
+ * 构造跳登录页时附带的 redirect 参数。
+ * - 仅在当前不是 /login/ 时携带，避免「登录后跳回登录页」的尴尬循环
+ * - 优先用 hash（admin 用 hash 路由），其次 pathname+search
+ */
+function buildRedirectQuery() {
+  const { pathname, hash, search } = window.location
+  if (pathname.startsWith("/login")) return undefined
+  const target = hash || pathname + (search || "")
+  if (!target || target === "/" || target === "/admin/") return undefined
+  return { redirect: target }
+}
 
 class Fetch {
   /**
@@ -32,7 +45,8 @@ class Fetch {
     this._withToken = withToken
     this._skipAuthRedirect = skipAuthRedirect
     this._silent = silent
-    this._instance = axios.create({ baseURL, timeout: 60000 })
+    // 10 分钟兜底：LLM refine / 长 SSE 聚合 / 批量 schema 都可能超 60s
+    this._instance = axios.create({ baseURL, timeout: 600000 })
     this._initial(this._instance)
   }
 
@@ -43,7 +57,7 @@ class Fetch {
           // 临近过期则后台静默刷新；refresh 接口本身会被 maybeRefreshToken 跳过
           await maybeRefreshToken(config.url)
           const token = getToken()
-          if (token) config.headers.Token = token
+          if (token) config.headers.Authorization = `Bearer ${token}`
 
           const activeRole = getAdminActiveRole()
           if (activeRole) config.headers["X-Active-Role"] = activeRole
@@ -59,8 +73,12 @@ class Fetch {
         const httpStatus = res.status
 
         // HTTP 401 → 登录态失效（后端返回 {code: 401, msg: "..."}）
+        // 必须清掉本地 token / user / active role 再跳；只跳不清会让登录页又看到
+        // 旧 token，guards 又放行 → 又触发请求 → 又 401 → 死循环。
+        // logoutAndRedirect 内部调用 lodash debounce 200ms 的 toLogin，并发 401
+        // 多请求只会跳一次。
         if (httpStatus === 401 || body.code === 401) {
-          if (!this._skipAuthRedirect) toLogin()
+          if (!this._skipAuthRedirect) logoutAndRedirect(buildRedirectQuery())
           return Promise.reject(new Error(body.msg || "登录已失效"))
         }
 
@@ -77,12 +95,12 @@ class Fetch {
       (error) => {
         const status = error?.response?.status
         if (status === 401) {
-          if (!this._skipAuthRedirect) toLogin()
+          if (!this._skipAuthRedirect) logoutAndRedirect(buildRedirectQuery())
           return Promise.reject(new Error(error?.response?.data?.msg || "登录已失效"))
         }
         const msg = error?.response?.data?.msg || error.message || "网络异常"
         if (!this._silent) notifyError(msg)
-        return Promise.reject(error)
+        return Promise.reject(Object.assign(new Error(msg), { raw: error?.response?.data, response: error?.response }))
       },
     )
   }

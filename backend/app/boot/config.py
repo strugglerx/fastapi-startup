@@ -44,6 +44,7 @@ class JwtConfig(_Base):
         validation_alias="JWT_SECRET_KEY",
     )
     expire_minutes: int = Field(default=480, validation_alias="JWT_EXPIRE_MINUTES")
+    refresh_expire_days: int = Field(default=30, validation_alias="JWT_REFRESH_EXPIRE_DAYS")
 
 
 class MailConfig(_Base):
@@ -80,6 +81,19 @@ class SeedAdminConfig(_Base):
         return bool(self.password)
 
 
+class QiniuConfig(_Base):
+    access_key: str = Field(default="", validation_alias="QINIU_ACCESS_KEY")
+    secret_key: str = Field(default="", validation_alias="QINIU_SECRET_KEY")
+    bucket: str = Field(default="", validation_alias="QINIU_BUCKET")
+    upload_endpoint: str = Field(default="https://up-z2.qiniup.com", validation_alias="QINIU_UPLOAD_ENDPOINT")
+    public_domain: str = Field(default="https://qiniu.muqiangyun.cn", validation_alias="QINIU_PUBLIC_DOMAIN")
+    token_expire: int = Field(default=3600, validation_alias="QINIU_TOKEN_EXPIRE")
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.access_key and self.secret_key and self.bucket and self.public_domain)
+
+
 class Settings(_Base):
     app: AppConfig = Field(default_factory=AppConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
@@ -87,6 +101,7 @@ class Settings(_Base):
     jwt: JwtConfig = Field(default_factory=JwtConfig)
     mail: MailConfig = Field(default_factory=MailConfig)
     seed_admin: SeedAdminConfig = Field(default_factory=SeedAdminConfig)
+    qiniu: QiniuConfig = Field(default_factory=QiniuConfig)
 
 
 def _find_env_file() -> Path:
@@ -119,6 +134,7 @@ except Exception as e:
         jwt=JwtConfig.model_construct(),
         mail=MailConfig.model_construct(),
         seed_admin=SeedAdminConfig.model_construct(),
+        qiniu=QiniuConfig.model_construct(),
     )
 
 app_config = settings.app
@@ -127,6 +143,7 @@ redis_config = settings.redis
 jwt_config = settings.jwt
 mail_config = settings.mail
 seed_admin_config = settings.seed_admin
+qiniu_config = settings.qiniu
 
 # 启动概览（敏感信息脱敏）
 _app_env = os.getenv("APP_ENV", "development")

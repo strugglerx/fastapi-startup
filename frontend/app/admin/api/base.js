@@ -6,9 +6,8 @@
  *   2. key 改成 smartai_admin_*       (跟 LoginCard.vue / apiFetch.js 现有约定一致)
  *   3. 去掉 wx miniprogram 分支       (我们只跑 Web)
  */
-import { debounce } from "lodash-es"
-
 const TOKEN_KEY    = "smartai_admin_token"
+const REFRESH_KEY  = "smartai_admin_refresh"
 const USER_KEY     = "smartai_admin_user"
 const REMEMBER_KEY = "smartai_admin_remember"
 const ROLE_KEY     = "smartai_admin_active_role"
@@ -32,10 +31,15 @@ function _writeJson(key, value) {
   _write(key, JSON.stringify(value ?? null))
 }
 
-// ── Token ──────────────────────────────────────────────────────
+// ── Token（access）──────────────────────────────────────────────
 export const getToken    = () => _read(TOKEN_KEY)
 export const setToken    = (t) => _write(TOKEN_KEY, t || "")
 export const clearToken  = () => _remove(TOKEN_KEY)
+
+// ── Refresh Token（默认 30d；access 过期时凭它换发新对）─────────
+export const getRefreshToken   = () => _read(REFRESH_KEY)
+export const setRefreshToken   = (t) => _write(REFRESH_KEY, t || "")
+export const clearRefreshToken = () => _remove(REFRESH_KEY)
 
 // ── 缓存的当前用户资料 ─────────────────────────────────────────
 export const getCachedAdminProfile = () => _readJson(USER_KEY, null)
@@ -57,10 +61,20 @@ function _toLogin(querys) {
   const tail = querys ? "?" + new URLSearchParams(querys).toString() : ""
   window.location.assign("/login/" + tail)
 }
+
+function debounce(fn, wait) {
+  let timer = null
+  return (...args) => {
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => fn(...args), wait)
+  }
+}
+
 export const toLogin = debounce(_toLogin, 200)
 
 // ── 退出（清状态 + 跳登录）─────────────────────────────────────
+// REMEMBER_KEY 不清，保留"记住我"在跨次登录间的账号回填。
 export function logoutAndRedirect(querys) {
-  _remove(TOKEN_KEY, USER_KEY, ROLE_KEY)
+  _remove(TOKEN_KEY, REFRESH_KEY, USER_KEY, ROLE_KEY)
   toLogin(querys)
 }

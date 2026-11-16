@@ -11,13 +11,15 @@ Service 层 —— 业务逻辑编排
 - 返回普通 dict，不返回 ORM 对象（避免 Session 关闭后访问字段崩溃）
 """
 from .role_service import RoleService
-from .user_service import UserService
+from .user import UserService
 from .menu_service import MenuService
 from .audit_service import AuditService
+from .auth_service import AuthService
 
 __all__ = [
     "MenuService",
     "RoleService",
     "UserService",
     "AuditService",
+    "AuthService",
 ]

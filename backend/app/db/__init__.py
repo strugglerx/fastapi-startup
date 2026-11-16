@@ -8,12 +8,13 @@ LastEditors: Moqi
 LastEditTime: 2025-12-01 21:35:56
 '''
 import os
+from typing import Generator
 from sqlalchemy import create_engine,event
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool  # 连接池实现
 from .models import *  # 导入所有模型
-from .sqlite import init_sqlite
-from .mysql import init_mysql
+from .sqlite import init_sqlite, run_db_migration as _run_db_migration_sqlite
+from .mysql import init_mysql, run_db_migration as _run_db_migration_mysql
 from app.boot import settings
 
 def init_engine():
@@ -37,3 +38,23 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def run_db_migration():
+    """在后台线程中执行耗时的建表 + ALTER TABLE 字段迁移。
+    由 lifespan 通过 asyncio.to_thread(run_db_migration) 调用，不阻塞主事件循环。"""
+    if os.getenv("APP_USE_SQLITE", "").lower() == "true":
+        _run_db_migration_sqlite(engine)
+    else:
+        _run_db_migration_mysql(engine)
