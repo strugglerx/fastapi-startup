@@ -237,7 +237,7 @@ async def allow_local_only(request: Request):
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """要求管理员权限（role=='admin' 或 fixed=True）"""
     if not is_admin(current_user):
-        raise APIException(msg="需要管理员权限", code=403)
+        raise APIException(msg="需要管理员权限", code=403, status_code=403)
     return current_user
 
 
@@ -259,7 +259,7 @@ def require_permission(permission: str):
         # 延迟导入，防止循环依赖
         from app.service import AuthService
         if not AuthService.check_permission(current_user.role, permission):
-            raise APIException(msg=f"权限不足，需要权限: {permission}", code=403)
+            raise APIException(msg=f"权限不足，需要权限: {permission}", code=403, status_code=403)
         return current_user
     return dependency
 
