@@ -141,6 +141,7 @@ def isolated_db(monkeypatch):
     import app.api.v1.deps as deps_mod
     import app.service.auth_service as auth_service_mod
     import app.service.user._admin_crud as admin_crud_mod
+    import app.service.role_service as role_service_mod
 
     monkeypatch.setattr(app_db, "SessionLocal", TestSessionLocal, raising=True)
     monkeypatch.setattr(helpers_mod, "SessionLocal", TestSessionLocal, raising=True)
@@ -148,9 +149,13 @@ def isolated_db(monkeypatch):
     monkeypatch.setattr(deps_mod, "SessionLocal", TestSessionLocal, raising=True)
     monkeypatch.setattr(auth_service_mod, "SessionLocal", TestSessionLocal, raising=True)
     monkeypatch.setattr(admin_crud_mod, "SessionLocal", TestSessionLocal, raising=True)
+    monkeypatch.setattr(role_service_mod, "SessionLocal", TestSessionLocal, raising=True)
+    role_service_mod.RoleService.invalidate_cache()
+    role_service_mod.RoleService.ensure_seed_roles()
 
     yield TestSessionLocal
 
+    role_service_mod.RoleService.invalidate_cache()
     engine.dispose()
     try:
         os.unlink(path)

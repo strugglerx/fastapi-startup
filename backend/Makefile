@@ -1,17 +1,22 @@
-.PHONY: help install venv frontend-deps run-api stop-api run-front clean build test format lint docs
+.PHONY: help install venv frontend-deps run-api run-api-prod stop-api run-front clean build test format lint docs
 
 # 可由命令行覆盖：make run-api PORT=9000 HOST=0.0.0.0
 PORT ?= 8000
 HOST ?= 0.0.0.0
 
+PYTHON ?= $(shell if [ -f "./venv/bin/python" ]; then echo "./venv/bin/python"; else echo "python3"; fi)
+UVICORN ?= $(shell if [ -f "./venv/bin/uvicorn" ]; then echo "./venv/bin/uvicorn"; else echo "uvicorn"; fi)
+PYTEST ?= $(shell if [ -f "./venv/bin/pytest" ]; then echo "./venv/bin/pytest"; else echo "pytest"; fi)
+
 help: ## 显示帮助信息
 	@echo "可用命令:"
 	@echo "  make install         - 安装所有依赖（后端+前端）"
 	@echo "  make venv            - 创建 Python 虚拟环境"
-	@echo "  make frontend-deps    - 安装前端依赖（如果存在 frontend 目录）"
-	@echo "  make run-api         - 启动 FastAPI 后端"
+	@echo "  make frontend-deps   - 安装前端依赖（如果存在 frontend 目录）"
+	@echo "  make run-api         - 启动 FastAPI 后端（开发模式）"
+	@echo "  make run-api-prod    - 启动 FastAPI 后端（生产模式，多 worker）"
 	@echo "  make stop-api        - 停止 FastAPI 后端"
-	@echo "  make run-front        - 启动前端服务（如果存在）"
+	@echo "  make run-front       - 启动前端服务（如果存在）"
 	@echo "  make clean           - 清理临时文件"
 	@echo "  make build           - 构建前端生产包"
 	@echo "  make test            - 运行测试"
@@ -21,9 +26,9 @@ help: ## 显示帮助信息
 install: ## 安装所有依赖
 	@echo "安装后端依赖..."
 	pip3 install -r requirements.txt
-	@if [ -d "frontend" ]; then \
+	@if [ -d "../frontend" ]; then \
 		echo "安装前端依赖..."; \
-		cd frontend && pnpm install; \
+		cd ../frontend && pnpm install; \
 	fi
 
 venv: ## 创建 Python 虚拟环境
@@ -32,8 +37,8 @@ venv: ## 创建 Python 虚拟环境
 	@echo "激活虚拟环境: source venv/bin/activate"
 
 frontend-deps: ## 安装前端依赖
-	@if [ -d "frontend" ]; then \
-		cd frontend && pnpm install; \
+	@if [ -d "../frontend" ]; then \
+		cd ../frontend && pnpm install; \
 	else \
 		echo "错误: frontend 目录不存在"; \
 	fi
@@ -42,19 +47,19 @@ run-api: ## 启动 FastAPI 后端（开发模式，自动重载）
 	@echo "停止占用 $(PORT) 端口的进程..."
 	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
 	@echo "启动 FastAPI 后端 http://$(HOST):$(PORT) ..."
-	APP_ENV=development uvicorn app.main:app --host $(HOST) --port $(PORT) --reload
+	APP_ENV=development $(UVICORN) app.main:app --host $(HOST) --port $(PORT) --reload
 
 run-api-prod: ## 启动 FastAPI 后端（生产模式，多 worker）
 	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
-	APP_ENV=production uvicorn app.main:app --host $(HOST) --port $(PORT) --workers 4
+	APP_ENV=production $(UVICORN) app.main:app --host $(HOST) --port $(PORT) --workers 4
 
 stop-api: ## 停止 FastAPI 后端
 	@echo "停止占用 $(PORT) 端口的进程..."
 	@lsof -ti:$(PORT) | xargs kill -9 2>/dev/null || true
 
 run-front: ## 启动前端服务
-	@if [ -d "frontend" ]; then \
-		cd frontend && pnpm dev; \
+	@if [ -d "../frontend" ]; then \
+		cd ../frontend && pnpm dev; \
 	else \
 		echo "错误: frontend 目录不存在"; \
 	fi
@@ -63,6 +68,7 @@ clean: ## 清理临时文件
 	@echo "清理 Python 缓存..."
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf .pytest_cache
 	@echo "清理日志..."
 	rm -rf logs/*.log 2>/dev/null || true
 	@echo "清理数据库文件..."
@@ -70,17 +76,17 @@ clean: ## 清理临时文件
 	@echo "清理完成！"
 
 build: ## 构建前端生产包
-	@if [ -d "frontend" ]; then \
+	@if [ -d "../frontend" ]; then \
 		echo "构建前端..."; \
-		cd frontend && pnpm build; \
+		cd ../frontend && pnpm build; \
 	else \
 		echo "错误: frontend 目录不存在"; \
 	fi
 
 test: ## 运行测试
-	@echo "运行测试..."
+	@echo "运行测试 (使用 $(PYTEST))..."
 	@if [ -d "tests" ]; then \
-		pytest -v; \
+		PYTHONPATH=. $(PYTEST) -v; \
 	else \
 		echo "警告: tests 目录不存在，请先创建测试文件"; \
 	fi
