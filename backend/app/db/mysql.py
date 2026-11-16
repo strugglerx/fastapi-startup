@@ -166,8 +166,9 @@ def auto_migrate_columns(engine):
         return s
 
     def should_modify_column_type(column, existing_type: str, desired_type: str) -> bool:
+        # 如果是主键，仅允许 INT -> BIGINT 类型的拓宽升级（适配雪花 ID 架构改造），其他主键变更跳过
         if column.primary_key:
-            return False
+            return "INT" in existing_type.upper() and "BIGINT" in desired_type.upper()
         return normalize_mysql_type(existing_type) != normalize_mysql_type(desired_type)
 
     try:
